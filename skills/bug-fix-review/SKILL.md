@@ -1,0 +1,105 @@
+---
+name: bug-fix-review
+description: bug-fix の各反復完了時に、5ステップの規律 (原因調査エビデンス、設計修正、前工程テスト設計＋コード追加 (TDD)、コード修正、テスト実施) が守られているかを検証する専用レビュースキル。verified に到達する直前にも全体チェックを行い、pass/fail を返す。dev-workflow オーケストレータから不具合ごとに自動で spawn される。
+---
+
+# bug-fix-review — 不具合修正レビュー
+
+## サブエージェント実行前提
+
+- `dev-workflow` から **対象不具合の bug-fix 反復1回 (5ステップ) 完了直後に自動 spawn** される。
+- スコープは **1不具合 (`B<NNN>`) の1反復**。
+- 戻り値: `summary` / `result` / `issues[]` / `next_action` / `updated_files` / `verdict`(`pass_and_verified` / `pass_but_open_iteration` / `fail`)。
+- レビュー票は `docs/06_reviews/<FID>/bug-fix-review-B<NNN>-iter<N>.md`。
+
+## 役割
+
+5ステップ反復のたびに **規律違反がないか** を検証する。違反があれば反復の途中であってもステップを戻す。
+特に **「原因調査が観察エビデンスに基づくか」** と **「テスト設計＋コードが先に Red 確認されたか (TDD)」** は厳格にチェック。
+
+## レビュー対象 (インプット ↔ アウトプット)
+
+| インプット                                                  | アウトプット                                              |
+| ----------------------------------------------------------- | --------------------------------------------------------- |
+| 検出元の `docs/04_test_results/<FID>/...` の Fail 行         | `docs/05_bug_reports/B<NNN>.md` の該当反復セクション      |
+| 詳細設計 / テスト設計 / 既存テストコード                    | `.dev-workflow/features/<FID>/bugs/B<NNN>.json`           |
+|                                                             | `tests/...` (新規追加されたテストコード)                  |
+|                                                             | `src/...` (修正されたプロダクトコード)                    |
+|                                                             | 各種設計ドキュメント (修正された場合)                     |
+
+## チェックリスト (5ステップごと)
+
+### Step 1: 原因調査 (Investigation)
+- [ ] `is_speculation = false` になっている
+- [ ] `evidence[]` に **観察によって得られた生のテキスト** (ログ・スタックトレース・変数値など) が記録されている
+- [ ] `method` (log_injection / debugger / trace / query_log 等) が明示されている
+- [ ] `debug_artifacts[]` が記録されている
+- [ ] Root Cause が **ファイル:行番号レベル** で特定されている
+- [ ] **推測だけで原因断定** していない
+
+### Step 2: 原因箇所の設計修正 (Design Fix)
+- [ ] `applicable` 判断 (true/false) と理由が記録されている
+- [ ] `applicable = true` の場合、`updated_design_files[]` に該当ドキュメントパスが列挙され、実際に Edit されている
+- [ ] `decisions.md` に「B<NNN>: 設計変更の判断と理由」が追記されている
+- [ ] 設計変更が広範囲にわたる場合、ユーザ確認の記録 (`decisions.md`) がある
+
+### Step 3: 前工程テスト設計＋テストコード追加 (TDD Red 確認)
+- [ ] `applicable_layers[]` が検出層に応じて正しい (unit→なし / integration→unit / e2e→unit+integration)
+- [ ] `applicable = false` の場合は、スキップ理由が明確
+- [ ] `applicable = true` の場合:
+  - [ ] `updated_test_design_files[]` でテスト設計が更新されている
+  - [ ] `added_test_code_paths[]` に新規/修正テストコードが列挙されている
+  - [ ] `new_test_case_ids[]` が記録されている
+  - [ ] **`red_confirmed = true`** (修正前コードで Fail 確認済み)
+  - [ ] 実行ログが `docs/04_test_results/<FID>/<layer>-result.md` の TDD 確認セクションに貼付済み
+
+### Step 4: コード修正 (Code Fix)
+- [ ] `changed_files[]` に変更ファイルが列挙されている
+- [ ] Step 1 で投入したデバッグログ等が `changed_files` に **混入していない** (除去済み)
+- [ ] 設計修正 (Step 2) と整合した修正になっている (設計外の変更が無い)
+
+### Step 5: テスト実施 (Verification)
+- [ ] `executed_test_ids[]` に以下4種すべてが含まれる:
+  1. 検出元のテストID
+  2. Step 3 で追加・修正したテストID
+  3. 同一機能 (`<FID>`) のリグレッション全件
+  4. 横断的影響範囲のテスト (該当時)
+- [ ] `pass_count`, `fail_count`, `failed_test_ids[]` が記録されている
+- [ ] 結果ログが `docs/04_test_results/<FID>/<layer>-result.md` に **反復番号付き** で追記されている
+- [ ] `iterations[i].result` が `pass` または `fail` に確定している
+
+### 全体 (反復終了時)
+- [ ] `iterations[i].ended_at` が記入されている
+- [ ] `fail_count == 0` ならば、最終的に `status = "verified"` に更新可能な状態 (orchestrator が更新)
+- [ ] `fail_count > 0` ならば、`status` は `investigating` のままで次反復が必要
+
+## 手順
+
+1. 対象不具合の `bug.json` を Read。最新反復 `iterations[-1]` のすべてのサブフェーズを取得。
+2. 関連する `bug-report.md` を Read。
+3. 関連する設計/テスト/コード ドキュメントを Read (修正されたファイル群)。
+4. 上記チェックリストを Step 1〜5 まで順に判定。
+5. `result` を確定:
+   - 全項目 OK かつ `fail_count == 0` → `verdict = "pass_and_verified"`
+   - 全項目 OK だが `fail_count > 0` → `verdict = "pass_but_open_iteration"` (規律は守られているが解消していないので次反復へ)
+   - チェック NG あり → `verdict = "fail"` (規律違反あり、該当ステップに戻す)
+6. `templates/review/review.md` から `docs/06_reviews/<FID>/bug-fix-review-B<NNN>-iter<N>.md` を生成。
+7. `bug.json` の `iterations[-1].review_result` を更新 (もし無ければフィールドを追加)。
+8. `status.json` の `phases.bug_fix.review.per_bug.B<NNN>` を更新。
+9. 戻り値を返す。
+
+## fail 時の戻し方針
+
+- Step 1 違反 (推測のみ) → `bug-fix` Step 1 から再実施 (デバッグエビデンス追加)
+- Step 2 違反 (設計修正の判断不備) → `bug-fix` Step 2 再実施
+- Step 3 違反 (TDD Red 未確認 / テストコード追加なし) → `bug-fix` Step 3 から再実施
+- Step 4 違反 (デバッグコード混入) → `bug-fix` Step 4 再実施
+- Step 5 違反 (リグレッション未実施) → `bug-fix` Step 5 再実施
+
+## 判定基準
+- **pass_and_verified**: 全項目 OK かつテスト全 Pass → 反復終了して verified
+- **pass_but_open_iteration**: 規律は守られているがテスト Fail 残り → 次反復に進む
+- **fail**: 規律違反あり → 該当ステップに戻す
+
+## 反復ガード
+- 同一不具合の反復が **5回** を超える場合、`bug-fix-review` は自動的に `fail` 扱いとし、ユーザにエスカレーションする (`open-questions.md` に追記、`AskUserQuestion` で確認)。

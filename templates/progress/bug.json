@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.1",
+  "bug_id": "B001",
+  "feature_id": "F001",
+  "title": "<不具合の1行サマリ>",
+  "severity": "medium",
+  "status": "open",
+  "found_in_phase": "testing",
+  "found_in_test_layer": "unit | integration | e2e",
+  "found_in_test_case_id": "",
+  "reported_at": "<ISO8601>",
+  "fixed_at": null,
+  "verified_at": null,
+  "reproduction_steps": [],
+  "expected": "",
+  "actual": "",
+  "iteration_count": 0,
+  "iterations": [
+    {
+      "iteration": 1,
+      "started_at": null,
+      "ended_at": null,
+      "result": "pending",
+      "sub_phases": {
+        "investigation": {
+          "status": "pending",
+          "started_at": null,
+          "completed_at": null,
+          "method": "",
+          "debug_artifacts": [],
+          "evidence": [],
+          "root_cause": "",
+          "is_speculation": false
+        },
+        "design_fix": {
+          "status": "pending",
+          "applicable": true,
+          "started_at": null,
+          "completed_at": null,
+          "updated_design_files": [],
+          "summary": ""
+        },
+        "test_design_fix": {
+          "status": "pending",
+          "applicable": null,
+          "applicable_layers": [],
+          "started_at": null,
+          "completed_at": null,
+          "updated_test_design_files": [],
+          "added_test_code_paths": [],
+          "new_test_case_ids": [],
+          "red_confirmed": false,
+          "summary": ""
+        },
+        "code_fix": {
+          "status": "pending",
+          "started_at": null,
+          "completed_at": null,
+          "changed_files": [],
+          "summary": ""
+        },
+        "test_execution": {
+          "status": "pending",
+          "started_at": null,
+          "completed_at": null,
+          "executed_test_ids": [],
+          "pass_count": 0,
+          "fail_count": 0,
+          "failed_test_ids": [],
+          "result_doc": ""
+        }
+      }
+    }
+  ],
+  "regression_test_cases": [],
+  "notes": ""
+}

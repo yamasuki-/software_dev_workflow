@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "project_name": "<プロジェクト名>",
+  "project_root": "<プロジェクトルートの絶対パス>",
+  "created_at": "<ISO8601>",
+  "updated_at": "<ISO8601>",
+  "current_phase": "init",
+  "phase_history": [
+    {
+      "phase": "init",
+      "started_at": "<ISO8601>",
+      "completed_at": null
+    }
+  ],
+  "requirements": {
+    "source_type": "file",
+    "source_path": "docs/requirements/requirements.md",
+    "summary": ""
+  },
+  "features": [],
+  "open_questions_path": ".dev-workflow/open-questions.md",
+  "decisions_log_path": ".dev-workflow/decisions.md",
+  "notes": ""
+}

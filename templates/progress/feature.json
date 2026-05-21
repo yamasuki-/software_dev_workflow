@@ -1,0 +1,137 @@
+{
+  "schema_version": "1.2",
+  "feature_id": "F001",
+  "name": "<機能名>",
+  "summary": "<1〜2行で機能の概要>",
+  "priority": "high",
+  "depends_on": [],
+  "created_at": "<ISO8601>",
+  "updated_at": "<ISO8601>",
+  "current_phase": "basic_design",
+  "phases": {
+    "basic_design": {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "artifacts": [],
+      "review": {
+        "status": "pending",
+        "iteration": 0,
+        "last_result": null,
+        "last_reviewed_at": null,
+        "review_doc": "docs/06_reviews/basic-design-review.md"
+      }
+    },
+    "detailed_design": {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "subtasks": {
+        "ui_design":          { "status": "pending", "artifact": "docs/02_detailed_design/F001/ui-design.md" },
+        "functional_design":  { "status": "pending", "artifact": "docs/02_detailed_design/F001/functional-design.md" },
+        "state_transition":   { "status": "pending", "artifact": "docs/02_detailed_design/F001/state-transition.md" },
+        "db_design":          { "status": "pending", "artifact": "docs/02_detailed_design/F001/db-design.md" },
+        "sequence":           { "status": "pending", "artifact": "docs/02_detailed_design/F001/sequence.md" }
+      },
+      "review": {
+        "status": "pending",
+        "iteration": 0,
+        "last_result": null,
+        "last_reviewed_at": null,
+        "review_doc": "docs/06_reviews/F001/detailed-design-review.md"
+      }
+    },
+    "test_design": {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "subtasks": {
+        "unit_test":        { "status": "pending", "artifact": "docs/03_test_design/F001/unit-test.md" },
+        "integration_test": { "status": "pending", "artifact": "docs/03_test_design/F001/integration-test.md" },
+        "e2e_test":         { "status": "pending", "artifact": "docs/03_test_design/F001/e2e-test.md" }
+      },
+      "review": {
+        "status": "pending",
+        "iteration": 0,
+        "last_result": null,
+        "last_reviewed_at": null,
+        "review_doc": "docs/06_reviews/F001/test-design-review.md"
+      }
+    },
+    "test_implementation": {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "tdd_phase": "red",
+      "subtasks": {
+        "unit_test": {
+          "status": "pending",
+          "test_code_paths": [],
+          "red_confirmed": false,
+          "red_evidence_doc": "docs/04_test_results/F001/unit-test-result.md"
+        },
+        "integration_test": {
+          "status": "pending",
+          "test_code_paths": [],
+          "red_confirmed": false,
+          "red_evidence_doc": "docs/04_test_results/F001/integration-test-result.md"
+        },
+        "e2e_test": {
+          "status": "pending",
+          "test_code_paths": [],
+          "red_confirmed": false,
+          "red_evidence_doc": "docs/04_test_results/F001/e2e-test-result.md"
+        }
+      },
+      "review": {
+        "status": "pending",
+        "iteration": 0,
+        "last_result": null,
+        "last_reviewed_at": null,
+        "review_doc": "docs/06_reviews/F001/test-implementation-review.md"
+      }
+    },
+    "implementation": {
+      "status": "pending",
+      "tdd_phase": "green",
+      "started_at": null,
+      "completed_at": null,
+      "review": {
+        "status": "pending",
+        "iteration": 0,
+        "last_result": null,
+        "last_reviewed_at": null,
+        "review_doc": "docs/06_reviews/F001/implementation-review.md"
+      }
+    },
+    "testing": {
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "subtasks": {
+        "unit_test":        { "status": "pending", "artifact": "docs/04_test_results/F001/unit-test-result.md" },
+        "integration_test": { "status": "pending", "artifact": "docs/04_test_results/F001/integration-test-result.md" },
+        "e2e_test":         { "status": "pending", "artifact": "docs/04_test_results/F001/e2e-test-result.md" }
+      },
+      "review": {
+        "status": "pending",
+        "iteration": 0,
+        "last_result": null,
+        "last_reviewed_at": null,
+        "review_doc": "docs/06_reviews/F001/testing-review.md"
+      }
+    },
+    "bug_fix": {
+      "status": "pending",
+      "open_bugs": [],
+      "closed_bugs": [],
+      "review": {
+        "status": "pending",
+        "per_bug": {},
+        "last_reviewed_at": null
+      }
+    }
+  },
+  "tasks": [],
+  "notes": ""
+}

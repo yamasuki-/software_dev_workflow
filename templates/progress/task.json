@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "task_id": "F001-T01",
+  "feature_id": "F001",
+  "phase": "implementation",
+  "title": "<タスクのタイトル(1行)>",
+  "description": "<タスクの目的・スコープ・完了条件>",
+  "status": "pending",
+  "estimated_size": "small",
+  "depends_on": [],
+  "artifacts": [],
+  "started_at": null,
+  "completed_at": null,
+  "blockers": [],
+  "notes": ""
+}
