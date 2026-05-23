@@ -6,9 +6,9 @@
 
 - **オーケストレータ＋サブエージェント方式**: `dev-workflow` がオーケストレータとして長期コンテキストを保持し、各フェーズの実作業は **別エージェント (サブエージェント)** として spawn する。コンテキストが肥大化しにくい。
 - **二段階の設計**: 全体の「基本設計」と機能ごとの「詳細設計」に分かれており、要件 → 機能 → 設計 → テスト → 実装 → 不具合修正 の流れが乱れにくい。
+- **フェーズバッチ実行**: 要件が複数機能 (`F001, F002, ...`) を持つ場合、**「同じフェーズを全機能まとめて」** 進める (機能ごとに最後まで通すのではない)。同一フェーズ内で全機能の成果物が同時に揃うので、命名規約・データ型・API 形式の **横断的な一貫性** をレビューで検証でき、**共通モジュール (`COMMON`) の機会も発見** できる。
 - **TDD を強制**: 詳細設計の後に必ず **テスト設計 → テストコード作成 (Red) → 実装 (Green)** の順で進む。テストコードはプロダクトコードより必ず先に書く。
-- **フェーズごとの専用レビューゲート**: 各フェーズ完了直後に対応するレビュースキルが自動 spawn され、インプット (前工程の成果物) との整合や規律順守を検証する。**レビュー pass しない限り次フェーズに進まない**。
-- **機能単位の作業**: 基本設計で確定した機能ID単位で、詳細設計 (UI/機能/状態/DB/シーケンスの5種)、テスト設計 (単体/結合/E2E)、テストコード作成、実装、テスト、不具合修正をループ。
+- **フェーズごとの専用レビューゲート**: 各フェーズ完了直後に対応するレビュースキルが自動 spawn され、インプット (前工程の成果物) との整合や規律順守、**横断的な一貫性と共通化の機会** を検証する。**レビュー pass しない限り次フェーズに進まない**。
 - **進捗の永続化**: 各機能・各タスクの状態を `.dev-workflow/` 配下の JSON / Markdown に保存。セッションが切れても続きから再開できる。サブエージェント間の引き継ぎもこのファイルを介して行う。
 - **推測しない**: 不明点はユーザに確認する。重要度が高ければ即時、軽微なものはフェーズ末でまとめて (ハイブリッド方針)。
 - **Mermaid を用いた図表**: 状態遷移、ER図、シーケンス図は Mermaid で記述。
@@ -866,33 +866,33 @@ flowchart TD
     Req[要件定義書] --> BD[basic-design]
     BD --> BDR{basic-design-review}
     BDR -->|fail| BD
-    BDR -->|pass| FL[機能一覧 F001, F002, ...]
-    FL --> DD[detailed-design]
-    DD --> DDR{detailed-design-review}
-    DDR -->|fail| DD
-    DDR -->|pass| TD[test-design]
-    TD --> TDR{test-design-review}
-    TDR -->|fail| TD
-    TDR -->|pass| TI[test-implementation<br/>TDD Red]
-    TI --> TIR{test-implementation-review}
-    TIR -->|fail| TI
-    TIR -->|pass| Impl[implementation<br/>TDD Green]
-    Impl --> IR{implementation-review}
-    IR -->|fail| Impl
-    IR -->|pass| Test[testing]
-    Test --> TR{testing-review}
-    TR -->|fail<br/>未実施あり| Test
-    TR -->|pass + Fail なし| Done[機能完了]
-    TR -->|pass + Fail あり| Bug[bug-fix<br/>5ステップ反復]
+    BDR -->|pass| FL[機能一覧<br/>F001, F002, F003<br/>+ COMMON 候補]
+
+    FL --> DDBatch[detailed-design<br/>全機能を並行 spawn]
+    DDBatch --> DDR{detailed-design-review<br/>全機能横断}
+    DDR -->|fail| DDBatch
+    DDR -->|pass / COMMON 確定| TDBatch[test-design<br/>全機能を並行 spawn]
+    TDBatch --> TDR{test-design-review<br/>全機能横断}
+    TDR -->|fail| TDBatch
+    TDR -->|pass| TIBatch[test-implementation<br/>TDD Red, 全機能並行]
+    TIBatch --> TIR{test-implementation-review<br/>全機能横断}
+    TIR -->|fail| TIBatch
+    TIR -->|pass| ImplBatch[implementation<br/>COMMON 先行 → 各機能並行<br/>TDD Green]
+    ImplBatch --> IR{implementation-review<br/>全機能横断<br/>+ 重複/共通化検出}
+    IR -->|fail| ImplBatch
+    IR -->|pass| TestBatch[testing<br/>全機能並行]
+    TestBatch --> TR{testing-review<br/>全機能横断}
+    TR -->|fail<br/>未実施あり| TestBatch
+    TR -->|pass + Fail なし| Final[最終レポート]
+    TR -->|pass + Fail あり| Bug[bug-fix<br/>バグごと 5ステップ反復]
     Bug --> BFR{bug-fix-review}
     BFR -->|fail| Bug
     BFR -->|pass_but_open| Bug
-    BFR -->|pass_and_verified| Test
-    Done -->|残機能あり| DD
-    Done -->|全機能完了| Final[最終レポート]
+    BFR -->|pass_and_verified| TestBatch
 ```
 
 各フェーズ完了の直後に **同名のレビュースキルが自動 spawn** され、判定によって次に進むか戻すかを決める。
+バッチモデルでは **そのフェーズの全機能の成果物が揃った状態** でレビューが走り、**横断的な一貫性** と **共通化の機会** を一度に検証する。
 
 ## 進捗状態の値
 

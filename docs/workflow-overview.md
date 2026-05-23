@@ -28,34 +28,41 @@ flowchart TD
     B --> C[basic-design]
     C --> CR{basic-design-review}
     CR -->|fail| C
-    CR -->|pass| C1[機能ID確定]
-    C1 --> D{機能ループ}
-    D --> E[detailed-design]
-    E --> ER{detailed-design-review}
-    ER -->|fail| E
-    ER -->|pass| F[test-design]
-    F --> FR{test-design-review}
-    FR -->|fail| F
-    FR -->|pass| FI[test-implementation<br/>TDD Red]
-    FI --> FIR{test-implementation-review}
-    FIR -->|fail| FI
-    FIR -->|pass| G[implementation<br/>TDD Green]
-    G --> GR{implementation-review}
-    GR -->|fail| G
-    GR -->|pass| H[testing]
-    H --> HR{testing-review<br/>全テスト完了確認}
-    HR -->|fail<br/>未実施あり| H
-    HR -->|pass + Fail なし| K{残機能あり?}
-    HR -->|pass + Fail あり| J[bug-fix<br/>5ステップ反復]
+    CR -->|pass| C1[機能ID確定<br/>F001, F002, F003 + COMMON 候補]
+
+    subgraph Batch [フェーズバッチ: 同じフェーズを全機能まとめて実行]
+      direction TB
+      DDBatch[detailed-design<br/>全機能を並行 spawn]
+      DDBatch --> DDR{detailed-design-review<br/>全機能横断<br/>共通化機会の発見}
+      DDR -->|fail| DDBatch
+      DDR --> TDBatch[test-design<br/>全機能並行]
+      TDBatch --> TDR{test-design-review<br/>全機能横断}
+      TDR -->|fail| TDBatch
+      TDR --> TIBatch[test-implementation<br/>TDD Red, 全機能並行]
+      TIBatch --> TIR{test-implementation-review}
+      TIR -->|fail| TIBatch
+      TIR --> ImplBatch[implementation<br/>COMMON 先行 → 各機能<br/>TDD Green]
+      ImplBatch --> IR{implementation-review<br/>重複/共通化検出}
+      IR -->|fail| ImplBatch
+      IR --> TestBatch[testing 全機能並行]
+      TestBatch --> TR{testing-review}
+    end
+
+    C1 --> DDBatch
+    TR -->|fail<br/>未実施あり| TestBatch
+    TR -->|pass + Fail なし| L[最終レポート<br/>00_final_report.md]
+    TR -->|pass + Fail あり| J[bug-fix<br/>5ステップ反復]
     J --> JR{bug-fix-review}
     JR -->|fail| J
     JR -->|pass_but_open| J
-    JR -->|pass_and_verified| H
-    K -->|yes| D
-    K -->|no| L[最終レポート<br/>00_final_report.md]
+    JR -->|pass_and_verified| TestBatch
 ```
 
-各フェーズはレビューゲートを通って初めて完了扱いになる。
+**重要なポイント:**
+- フェーズはバッチで進む (機能ごとに最後まで通さない)
+- 各フェーズは全機能の作業が揃ってからレビュー → 次フェーズへ
+- レビューは **横断的な一貫性** と **共通化の機会** を検出
+- 改修・新機能追加で1機能だけ進める場合も同じフロー (バッチ対象が1機能になるだけ)
 
 ## TDD の規律
 
