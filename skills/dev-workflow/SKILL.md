@@ -153,7 +153,8 @@ bug_fix (iter N)    → bug-fix-review (iter N)
 スキル: <phase>   (このスキルの SKILL.md を Claude Code のスキル探索順で見つけて Read してください)
 
 【作業手順】
-1. Claude Code のスキルディレクトリ (`<PROJECT_ROOT>/.claude/skills/<phase>/SKILL.md` 優先、無ければ `~/.claude/skills/<phase>/SKILL.md`) から本フェーズの SKILL.md を Read し、その指示に厳密に従う。
+1. ユーザグローバルにインストールされた `~/.claude/skills/<phase>/SKILL.md` から本フェーズの SKILL.md を Read し、その指示に厳密に従う。
+   ※ Claude Code は仕様上 `<PROJECT_ROOT>/.claude/skills/<phase>/` があればそちらを優先するが、本ベースワークフローでは通常そこには何も置かない (プロジェクトローカル上書きは `dev-workflow-overlay` 経由の Advanced 機能)。
 2. プロジェクトルート配下の以下を必要に応じて Read:
    - .dev-workflow/project.json
    - .dev-workflow/features/<FID>/status.json (機能単位の場合)
@@ -194,8 +195,8 @@ Task(
 スキル: basic-design
 
 【作業手順】
-1. Claude Code のスキル探索順で `basic-design` スキルの SKILL.md を見つけて Read し、指示に従う。
-   ( <PROJECT_ROOT>/.claude/skills/basic-design/SKILL.md があればそちらを優先、無ければ ~/.claude/skills/basic-design/SKILL.md )
+1. `~/.claude/skills/basic-design/SKILL.md` を Read し、指示に従う。
+   (通常はユーザグローバルに置かれている。プロジェクトローカル上書きは Advanced で別途 `dev-workflow-overlay` を使う)
 2. .dev-workflow/project.json と docs/requirements/requirements.md を読む。
 3. 基本設計4ドキュメントを作成、機能IDを採番、各機能の status.json を作成。
 4. 不明点はユーザに確認 (重要度に応じて即時/蓄積)。
