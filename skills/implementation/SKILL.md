@@ -62,7 +62,7 @@ flowchart LR
 - **配線・設定** (DI、ルーティング、環境変数) — 1タスク
 - **既存への組み込み** — 1タスク
 
-各タスクは `templates/progress/task.json` をコピーして以下を埋める:
+各タスクは本スキルディレクトリ配下の `resources/task.json` をコピーして以下を埋める:
 
 ```
 {

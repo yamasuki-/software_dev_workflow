@@ -70,7 +70,7 @@ description: detailed-design フェーズ完了時に、機能の詳細設計成
 1. インプット (基本設計4ドキュメントの関連箇所、要件の該当箇所) を Read。
 2. アウトプット5ドキュメントを Read。
 3. 上記チェックリストを判定。
-4. `templates/review/review.md` から `docs/06_reviews/<FID>/detailed-design-review.md` を生成。
+4. 本スキルディレクトリ配下の `resources/review.md` から `docs/06_reviews/<FID>/detailed-design-review.md` を生成。
 5. `status.json` の `phases.detailed_design.review` を更新:
    - `iteration += 1`, `last_result`, `last_reviewed_at`, `status = "completed"`
 6. 戻り値を返す。

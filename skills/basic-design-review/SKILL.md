@@ -63,7 +63,7 @@ description: basic-design フェーズ完了時に、基本設計成果物が要
 2. アウトプット4ドキュメントと全機能の `status.json` を Read。
 3. 上記チェックリストを上から順に判定。OK/NG/該当なし を埋める。
 4. NG が1件でもあれば `result = "fail"`、すべて OK なら `result = "pass"`。
-5. `templates/review/review.md` をコピーして `docs/06_reviews/basic-design-review.md` を生成 (反復2回目以降は `-2`, `-3`)。
+5. 本スキルディレクトリ配下の `resources/review.md` をコピーして `docs/06_reviews/basic-design-review.md` を生成 (反復2回目以降は `-2`, `-3`)。
 6. `feature.json` の **全機能** の `phases.basic_design.review` を更新:
    - `status = "completed"`, `iteration += 1`
    - `last_result = "pass" | "fail"`
