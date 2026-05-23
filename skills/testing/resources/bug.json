@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "bug_id": "B001",
   "feature_id": "F001",
   "title": "<不具合の1行サマリ>",
@@ -32,11 +32,18 @@
           "root_cause": "",
           "is_speculation": false
         },
-        "design_fix": {
+        "design_handoff": {
           "status": "pending",
-          "applicable": true,
           "started_at": null,
           "completed_at": null,
+          "classification": "pending",
+          "target_phase": "none",
+          "target_FIDs": [],
+          "reason": "",
+          "decision_notes": "",
+          "design_rerun_completed_at": null,
+          "design_review_per_feature_passed": false,
+          "design_review_cross_passed": false,
           "updated_design_files": [],
           "summary": ""
         },

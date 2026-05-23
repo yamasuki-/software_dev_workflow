@@ -86,29 +86,49 @@ flowchart LR
 - `implementation` のゴール: 失敗テストを **最小実装で Pass** させる (Green)、その後 Refactor
 - `implementation` の中で **新規テストを書くことは禁止** (必要なら test-implementation か bug-fix に戻る)
 
-## bug-fix の5ステップ反復ループ
+## bug-fix の5ステップ反復ループ (設計差し戻し型)
+
+**bug-fix は設計を直接編集しない**。設計変更が必要な場合は該当設計フェーズ (`basic-design` / `detailed-design`) に差し戻し、そこの 2 段レビュー (per_feature + cross) を通って初めて設計が確定。bug-fix は調整役。
 
 ```mermaid
 flowchart TD
-    Start([不具合 open]) --> S1
-    S1[Step 1. 原因調査<br/>推測禁止・デバッグコード/ログ等で<br/>エビデンスを取得して原因特定]
-    S1 --> S2[Step 2. 原因箇所の設計修正<br/>該当する詳細設計を更新]
-    S2 --> S3[Step 3. 前工程テスト設計修正<br/>TDD: 修正前は Fail を確認]
-    S3 --> S4[Step 4. コード修正]
-    S4 --> S5[Step 5. テスト実施<br/>検出元・追加分・リグレッション]
+    Start([不具合 open]) --> S1[Step 1 原因調査 推測禁止 エビデンス必須]
+    S1 --> S2[Step 2 影響範囲の判定とハンドオフ 分類のみ 直接編集禁止]
+    S2 -->|code_bug_only| S3
+    S2 -->|design_error_detailed| HD[detailed-design 差し戻し 2段レビュー]
+    S2 -->|design_error_basic| HB[basic-design 差し戻し 2段レビュー]
+    S2 -->|undocumented_behavior| HC[該当設計フェーズが妥当性判定]
+    S2 -->|requirements_misinterpretation| HB
+    HD --> S3
+    HB --> S3
+    HC -->|入れる 設計更新| S3
+    HC -->|入れない コード除去| S4
+    S3[Step 3 前工程テスト設計修正 + テストコード追加 TDD]
+    S3 --> S4[Step 4 コード修正]
+    S4 --> S5[Step 5 テスト実施 検出元 追加分 リグレッション]
     S5 -->|全 Pass| Verified([verified])
     S5 -->|Fail あり| S1
 ```
 
-**前工程テスト設計修正の適用ルール:**
+**Step 2 の分類と差し戻し先:**
+
+| 分類                            | 差し戻し先                                  |
+| ------------------------------- | ------------------------------------------- |
+| `code_bug_only`                 | なし (Step 3 へ)                            |
+| `design_error_detailed`         | `detailed-design`                           |
+| `design_error_basic`            | `basic-design`                              |
+| `undocumented_behavior`         | 該当設計フェーズで「入れるべきか」判断       |
+| `requirements_misinterpretation`| `basic-design` (必要なら要件もユーザ確認)    |
+
+**前工程テスト設計修正の適用ルール (Step 3):**
 
 | 検出層 | 補強対象の前工程層 |
 |--------|--------------------|
-| unit | (なし。スキップ可) |
+| unit | なし。スキップ可 |
 | integration | unit |
-| e2e | unit + integration |
+| e2e | unit と integration |
 
-3回反復しても解消しない不具合は、設計の根本欠陥の可能性があるためユーザにエスカレーション。
+反復が 5 回を超えても解消しない不具合 (特に差し戻しが繰り返される場合) は、設計の根本欠陥の可能性が高い → ユーザにエスカレーション。
 
 ## フェーズと成果物の対応
 

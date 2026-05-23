@@ -24,11 +24,20 @@ description: テストで検出された不具合の修正を「原因調査(エ
 ```mermaid
 flowchart TD
     Start([不具合 open]) --> S1
-    S1[1. 原因調査<br/>エビデンス必須・推測禁止] --> S2
-    S2[2. 設計修正<br/>該当設計ドキュメントを更新] --> S3
-    S3[3. 前工程テスト設計修正<br/>TDD: 先に Fail を確認] --> S4
-    S4[4. コード修正] --> S5
-    S5[5. テスト実施<br/>検出元・追加分・リグレッション]
+    S1[1 原因調査 エビデンス必須 推測禁止] --> S2
+    S2[2 影響範囲の判定とハンドオフ<br/>分類のみ 設計編集はしない]
+    S2 -->|code_bug_only| S3
+    S2 -->|design_error_detailed| HOdetailed[detailed-design 差し戻し → 2段レビュー]
+    S2 -->|design_error_basic| HObasic[basic-design 差し戻し → 2段レビュー]
+    S2 -->|undocumented_behavior| HOcheck[該当設計フェーズが妥当性判定]
+    S2 -->|requirements_misinterpretation| HObasic
+    HOdetailed --> S3
+    HObasic --> S3
+    HOcheck -->|入るべき = 設計更新| S3
+    HOcheck -->|入れない = コードから除去| S4
+    S3[3 前工程テスト設計修正 + テストコード追加<br/>TDD 先に Fail を確認] --> S4
+    S4[4 コード修正] --> S5
+    S5[5 テスト実施 検出元 追加分 リグレッション]
     S5 -->|全 Pass| Verified([verified])
     S5 -->|Fail あり| Loop[次の反復へ]
     Loop --> S1
@@ -108,40 +117,64 @@ bug-report.md の「1. 原因調査」セクションも同じ内容を埋める
 
 ---
 
-### Step 2 : 原因箇所の設計修正 (Design Fix)
+### Step 2 : 影響範囲の判定とハンドオフ (Impact Assessment & Handoff)
 
-不具合の原因に応じて以下に分岐:
+**bug-fix スキルは設計を直接編集しない。** 設計の修正・追記・削除はすべて該当する設計フェーズ (`basic-design` / `detailed-design`) の責務であり、それらのフェーズが自身のレビューゲート (per_feature + cross) を通って初めて確定する。
+本 Step ではどの設計フェーズに差し戻すかを判定し、`bug.json` に記録するだけ。実際の差し戻し spawn はオーケストレータ (`dev-workflow`) が行う。
 
-| 原因の種類                                            | 設計修正の要否 |
-| ----------------------------------------------------- | -------------- |
-| 設計どおりに実装したが設計自体が誤り                  | **必須**       |
-| 設計に記載がない振る舞いをコードで実装していた        | **必須** (設計に追記)  |
-| 設計どおりだが実装にバグがあった                      | 不要 (理由を記録) |
-| 仕様の見落とし (要件解釈ミス)                         | 基本設計から確認 → 必須 |
+#### 分類 (classification)
 
-設計修正が必要な場合:
+原因調査の結果に応じて以下のいずれかに分類する:
 
-1. 影響を受けるドキュメントを特定:
-   - `docs/02_detailed_design/<FID>/functional-design.md`
-   - `docs/02_detailed_design/<FID>/state-transition.md`
-   - `docs/02_detailed_design/<FID>/db-design.md`
-   - `docs/02_detailed_design/<FID>/sequence.md`
-   - `docs/02_detailed_design/<FID>/ui-design.md`
-   - 影響が大きい場合は `docs/01_basic_design/*.md`
-2. **設計の変更点が広範囲にわたる場合は必ずユーザに即時確認** (チャットで質問)。
-3. 該当ドキュメントを Edit で更新。
-4. `decisions.md` に「B<番号>: 設計変更の判断と理由」を追記。
+| 分類                            | 内容                                                                     | 取るアクション                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `code_bug_only`                 | 設計どおり。実装にバグがあるだけ                                         | 設計差し戻しなし。Step 3 (テストコード補強) → Step 4 (コード修正) へ進む              |
+| `design_error_detailed`         | 詳細設計に誤りがある (機能内設計の問題)                                  | **`detailed-design` に差し戻し**。該当機能の詳細設計を再実施 → そのレビューを通す     |
+| `design_error_basic`            | 基本設計に誤りがある (機能分割・アーキ・要件解釈の問題)                  | **`basic-design` に差し戻し**。基本設計を再実施 → そのレビューを通す                  |
+| `undocumented_behavior`         | コードに設計外の振る舞いがある                                           | **そもそも設計に入れるべきか** を該当設計フェーズに検証依頼。結果次第で分岐 (下記参照) |
+| `requirements_misinterpretation`| 要件解釈ミス。要件理解が間違っていた                                     | **`basic-design` まで戻し**、必要なら要件 (USDM 等) もユーザ確認                       |
 
-`bug.json` 更新:
-```
-iterations[i].sub_phases.design_fix:
-  status = "completed"
-  applicable = true | false
-  updated_design_files = ["..."]
-  summary = "<変更の要点>"
-```
+#### `undocumented_behavior` の検証フロー
 
-設計修正不要の場合は `applicable = false` とし `summary` に理由を記載。
+コードに「設計に書かれていないが実装されている振る舞い」が見つかった場合は、ユーザの規律として **そもそもそれが設計に入るべきかをまず判断** する:
+
+1. オーケストレータに `target_phase = detailed_design` (または `basic_design`) を返す
+2. オーケストレータが該当設計フェーズを spawn し、サブエージェントは:
+   - 当該振る舞いがあるべきか (要件/上位設計から見て妥当か) を判断
+   - **入るべき** → 設計を更新 → レビュー通過後、bug-fix Step 3 へ
+   - **入るべきでない** → 設計は変更せず、`decisions.md` に「コード側で除去」と記録。bug-fix は当該コードを除去する Step 4 へ
+3. この判断結果を `bug.json` の `decision_notes` に記録
+
+つまり「設計に書いていないからとりあえず追記する」は禁止。**追記の妥当性自体を設計フェーズが判断** する。
+
+#### 手順
+
+1. **判定**: 原因調査結果 (Step 1) に基づいて上記分類のいずれかを選ぶ。即時判断が難しい場合 (`undocumented_behavior` 等) は **ユーザにチャットで確認**。
+2. **`bug.json` 更新**:
+   ```
+   iterations[i].sub_phases.design_handoff:
+     status              = "in_progress"
+     classification      = "code_bug_only" | "design_error_detailed" | "design_error_basic" | "undocumented_behavior" | "requirements_misinterpretation"
+     target_phase        = "none" | "detailed_design" | "basic_design"
+     target_FIDs         = [<差し戻し対象機能ID>]
+     reason              = "<分類の根拠 (Step 1 のエビデンスに基づく)>"
+     decision_notes      = ""           ※ undocumented_behavior の場合に設計フェーズの判断結果を記入
+   ```
+3. **`code_bug_only` 以外** の場合: 戻り値で **「設計差し戻しが必要」とオーケストレータに通知** して本反復を一旦中断 (`status = "blocked_for_design_rerun"`)。本スキルからは設計ドキュメントを Edit してはいけない。
+4. **`code_bug_only`** の場合: そのまま Step 3 へ進む。
+
+#### オーケストレータ側の挙動 (参考・本スキルは触らない)
+
+- 差し戻し要請を受けたら、対象の設計フェーズ (`basic-design` または `detailed-design`) を spawn
+- 設計フェーズは通常どおり進み、その **2 段レビュー (per_feature + cross)** を通って完了
+- レビュー通過後、`bug.json` の `design_handoff.design_rerun_completed_at`, `design_review_per_feature_passed`, `design_review_cross_passed`, `updated_design_files[]` を更新
+- bug-fix を再 spawn し、本反復を **Step 3 から再開**
+
+#### `design_handoff` 完了の判定
+
+- `code_bug_only`: `status = "completed"`, `target_phase = "none"`
+- それ以外: 設計フェーズの差し戻しが完了し `design_review_per_feature_passed && design_review_cross_passed` が両方 true、`design_rerun_completed_at` が記入されている → `status = "completed"`
+- 上記のいずれでもないときは `status = "in_progress"` で、bug-fix の反復は次に進めない
 
 ---
 
@@ -276,10 +309,13 @@ bug-fix-review の判定に従い:
 ## チェックリスト (不具合の verified 判定)
 
 - [ ] 原因調査は **観察エビデンスに基づく** (推測ではない)
-- [ ] 設計修正の要否が判定済み・必要なら反映済み
+- [ ] **Step 2 で bug-fix が設計を直接編集していない** (規律)
+- [ ] 分類 (`classification`) が記録され、必要な場合は設計フェーズに差し戻されている
+- [ ] 差し戻した場合: 該当設計フェーズの **per_feature レビュー + cross レビュー両方** を pass している (`design_review_per_feature_passed && design_review_cross_passed`)
+- [ ] `undocumented_behavior` の場合: 設計フェーズが「入れるべきか」を判断し、`decision_notes` に結論と理由が記録されている
 - [ ] 前工程テスト層の補強が **TDD で** 行われている (修正前 Fail / 修正後 Pass を確認)
 - [ ] コード修正で投入したデバッグコードが残っていない
 - [ ] 検出元・追加分・機能内リグレッションがすべて Pass
 - [ ] `bug.json` の最新反復 `iterations[-1].result = "pass"`, `status = "verified"`
 - [ ] `status.json` の `open_bugs` から `closed_bugs` に移動済み
-- [ ] `decisions.md` への追記が完了 (設計変更があった場合)
+- [ ] `decisions.md` への追記が完了 (差し戻し判断と理由)

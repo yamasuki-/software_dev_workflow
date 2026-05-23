@@ -68,20 +68,31 @@
 - Root Cause (1〜3行で):
 - 推測ではないことの確認: [ ] 観察によって裏付けられている
 
-#### 2. 原因箇所の設計修正 (Design Fix)
+#### 2. 影響範囲の判定とハンドオフ (Impact Assessment & Handoff)
 
-> 設計が誤っていたために発生した不具合の場合、まず **設計ドキュメント** を修正する。
-> コードバグであっても、設計に記載されていない振る舞いだった場合は設計に追記すること。
+> **bug-fix は設計を直接編集しない**。本 Step では分類のみを行い、必要なら該当する設計フェーズ (`basic-design` / `detailed-design`) に差し戻す。
+> 実際の設計修正と、そのレビュー (per_feature + cross) は **設計フェーズの責務**。
+> 「コードに設計外の振る舞いがある」場合も、設計に追記してよいかは設計フェーズに判断させる (勝手に追記禁止)。
 
-- 設計修正が必要か:  yes / no (no の場合は理由を記載)
-- 更新した設計ドキュメント:
-  - [ ] `docs/02_detailed_design/<FID>/functional-design.md`
-  - [ ] `docs/02_detailed_design/<FID>/state-transition.md`
-  - [ ] `docs/02_detailed_design/<FID>/db-design.md`
-  - [ ] `docs/02_detailed_design/<FID>/sequence.md`
-  - [ ] `docs/02_detailed_design/<FID>/ui-design.md`
-  - [ ] `docs/01_basic_design/*.md` (該当時)
-- 変更概要:
+- 分類 (`classification`): 以下から1つ選ぶ
+  - [ ] `code_bug_only`                  — 設計どおり。実装にバグがあるだけ → 差し戻しなし
+  - [ ] `design_error_detailed`          — 詳細設計に誤り → `detailed-design` 差し戻し
+  - [ ] `design_error_basic`             — 基本設計 (機能分割・アーキ・要件解釈) に誤り → `basic-design` 差し戻し
+  - [ ] `undocumented_behavior`          — コードに設計外の振る舞いがある → 該当設計フェーズで「入れるべきか」検証
+  - [ ] `requirements_misinterpretation` — 要件解釈ミス → `basic-design` まで戻し、必要なら要件もユーザ確認
+- 差し戻し先フェーズ (`target_phase`): none / `detailed_design` / `basic_design`
+- 対象機能ID:
+- 判定根拠 (Step 1 のエビデンス):
+
+##### 差し戻し結果 (`code_bug_only` 以外の場合のみ)
+
+- `design_rerun_completed_at`:
+- `design_review_per_feature_passed`: yes / no
+- `design_review_cross_passed`: yes / no
+- 更新された設計ドキュメント:
+- `decision_notes` (特に `undocumented_behavior` の判断):
+  - [ ] 入れるべき → 設計を更新済み (Step 3 へ進む)
+  - [ ] 入れるべきでない → 設計は変更せず、当該コードを Step 4 で除去
 - `decisions.md` への追記: [ ] 実施済み
 
 #### 3. テスト設計＋テストコードの修正 (Test Design & Code Fix) — **TDD**
@@ -133,28 +144,4 @@
 - 結果ドキュメント (追記先): `docs/04_test_results/<FID>/...`
 - すべて Pass:
   - [ ] yes → 反復終了。本不具合は `verified` に進める
-  - [ ] no  → 新たな観察結果を踏まえ **反復 #2 を開始**
-
-#### 反復 #1 の振り返り
-- 想定通りだった点:
-- 想定外だった点 (次反復の調査の手がかり):
-
----
-
-### 反復 #2 以降
-
-> Fail が残った場合、上と同じ構造をコピーして「反復 #2」「反復 #3」... を追記する。
-> 反復 #N の原因調査は、前反復の修正後に **何が変わって/変わらず Fail しているか** を必ず観察すること。
-
----
-
-## 修正完了の判定
-
-- [ ] Root Cause が観察エビデンス付きで特定されている
-- [ ] 該当する設計ドキュメントが更新されている (または更新不要の理由が記載)
-- [ ] 前工程のテスト層に対しテスト設計が追加・修正されている (またはスキップ理由)
-- [ ] 追加・修正したテストが「修正前は Fail」「修正後は Pass」になることを確認
-- [ ] 機能内リグレッションがすべて Pass
-- [ ] `decisions.md` への追記が完了
-- [ ] bug.json の `status = "verified"`, `verified_at` 記入
-- [ ] `status.json` の `open_bugs` から `closed_bugs` に移動
+  - [ ] no  → 新たな観察結果を踏まえ **反復 #2
