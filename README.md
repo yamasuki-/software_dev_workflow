@@ -45,7 +45,7 @@ flowchart LR
     Orch -.spawn.-> Phase[フェーズスキル群<br/>basic-design / detailed-design /<br/>test-design / test-implementation /<br/>implementation / testing / bug-fix]
     Phase --> Review[対応するレビュースキル群<br/>*-review]
     Orch -.spawn.-> Review
-    Phase & Review <--> Files[(.dev-workflow/<br/>docs/<br/>src/<br/>tests/)]
+    Phase & Review <--> Files[(.dev-workflow docs src tests)]
     Orch <-.read.-> Files
 ```
 
@@ -692,10 +692,10 @@ dev-workflow で改修したい。
 ```mermaid
 flowchart TD
     User[ユーザ] -.invoke.-> Overlay[dev-workflow-overlay]
-    Overlay -->|1. Read| Rules[(<project>/.dev-workflow/rules/)]
+    Overlay -->|1. Read| Rules[(project .dev-workflow rules)]
     Overlay -->|2. Read & follow| BaseOrch[base: ~/.claude/skills/dev-workflow/]
     Overlay -->|3. spawn with overlay| BaseSkill[base: ~/.claude/skills/&lt;name&gt;/]
-    BaseSkill <-->|read/write| Files[(.dev-workflow/<br/>docs/<br/>src/<br/>tests/)]
+    BaseSkill <-->|read write| Files[(.dev-workflow docs src tests)]
 ```
 
 #### 層B: ルールの追加/部分上書き — `<project>/.dev-workflow/rules/<phase>.md` (**標準**)
@@ -866,33 +866,46 @@ flowchart TD
     Req[要件定義書] --> BD[basic-design]
     BD --> BDR{basic-design-review}
     BDR -->|fail| BD
-    BDR -->|pass| FL[機能一覧<br/>F001, F002, F003<br/>+ COMMON 候補]
+    BDR -->|pass| FL[機能一覧 F001 F002 F003 COMMON]
 
-    FL --> DDBatch[detailed-design<br/>全機能を並行 spawn]
-    DDBatch --> DDR{detailed-design-review<br/>全機能横断}
-    DDR -->|fail| DDBatch
-    DDR -->|pass / COMMON 確定| TDBatch[test-design<br/>全機能を並行 spawn]
-    TDBatch --> TDR{test-design-review<br/>全機能横断}
-    TDR -->|fail| TDBatch
-    TDR -->|pass| TIBatch[test-implementation<br/>TDD Red, 全機能並行]
-    TIBatch --> TIR{test-implementation-review<br/>全機能横断}
-    TIR -->|fail| TIBatch
-    TIR -->|pass| ImplBatch[implementation<br/>COMMON 先行 → 各機能並行<br/>TDD Green]
-    ImplBatch --> IR{implementation-review<br/>全機能横断<br/>+ 重複/共通化検出}
-    IR -->|fail| ImplBatch
-    IR -->|pass| TestBatch[testing<br/>全機能並行]
-    TestBatch --> TR{testing-review<br/>全機能横断}
-    TR -->|fail<br/>未実施あり| TestBatch
-    TR -->|pass + Fail なし| Final[最終レポート]
-    TR -->|pass + Fail あり| Bug[bug-fix<br/>バグごと 5ステップ反復]
+    FL --> DDBatch[detailed-design 全機能 並行 spawn]
+    DDBatch --> DDR1{detailed-design-review per_feature}
+    DDR1 -->|fail| DDBatch
+    DDR1 -->|all pass| DDR2{detailed-design-review cross}
+    DDR2 -->|fail| DDBatch
+    DDR2 -->|pass| TDBatch[test-design 全機能 並行]
+    TDBatch --> TDR1{test-design-review per_feature}
+    TDR1 -->|fail| TDBatch
+    TDR1 -->|all pass| TDR2{test-design-review cross}
+    TDR2 -->|fail| TDBatch
+    TDR2 -->|pass| TIBatch[test-implementation TDD Red 並行]
+    TIBatch --> TIR1{test-implementation-review per_feature}
+    TIR1 -->|fail| TIBatch
+    TIR1 -->|all pass| TIR2{test-implementation-review cross}
+    TIR2 -->|fail| TIBatch
+    TIR2 -->|pass| ImplBatch[implementation COMMON先行 各機能 TDD Green]
+    ImplBatch --> IR1{implementation-review per_feature}
+    IR1 -->|fail| ImplBatch
+    IR1 -->|all pass| IR2{implementation-review cross 重複検出}
+    IR2 -->|fail| ImplBatch
+    IR2 -->|pass| TestBatch[testing 全機能 並行]
+    TestBatch --> TR1{testing-review per_feature}
+    TR1 -->|fail| TestBatch
+    TR1 -->|all pass| TR2{testing-review cross}
+    TR2 -->|fail| TestBatch
+    TR2 -->|pass no fail| Final[最終レポート]
+    TR2 -->|pass with fail| Bug[bug-fix 5ステップ反復]
     Bug --> BFR{bug-fix-review}
     BFR -->|fail| Bug
     BFR -->|pass_but_open| Bug
     BFR -->|pass_and_verified| TestBatch
 ```
 
-各フェーズ完了の直後に **同名のレビュースキルが自動 spawn** され、判定によって次に進むか戻すかを決める。
-バッチモデルでは **そのフェーズの全機能の成果物が揃った状態** でレビューが走り、**横断的な一貫性** と **共通化の機会** を一度に検証する。
+**レビューは 2 段ゲート:**
+1. **個別レビュー (per_feature)**: 機能ごとに並行 spawn。per-feature 内の整合を確認。全機能 pass を待つ
+2. **横断レビュー (cross)**: 全機能まとめて 1 回 spawn。命名統一・データ型整合・共通化機会を検証
+
+両方 pass しないと次フェーズに進めない。
 
 ## 進捗状態の値
 

@@ -4,16 +4,16 @@
 
 ```mermaid
 flowchart TD
-    User[ユーザ] <--> Orch[dev-workflow<br/>オーケストレータ]
-    Orch -.Task ツールで spawn.-> BDA[basic-design]
-    Orch -.spawn.-> DDA[detailed-design]
-    Orch -.spawn.-> TDA[test-design]
-    Orch -.spawn.-> TIA[test-implementation<br/>TDD Red]
-    Orch -.spawn.-> ImpA[implementation<br/>TDD Green]
-    Orch -.spawn.-> TstA[testing]
-    Orch -.spawn.-> BugA[bug-fix]
-    BDA & DDA & TDA & TIA & ImpA & TstA & BugA <-->|read/write| FS[(.dev-workflow/<br/>docs/<br/>src/<br/>tests/)]
-    Orch <-.read.-> FS
+    User["ユーザ"] <--> Orch["dev-workflow<br/>オーケストレータ"]
+    Orch -. "Task ツールで spawn" .-> BDA["basic-design"]
+    Orch -. spawn .-> DDA["detailed-design"]
+    Orch -. spawn .-> TDA["test-design"]
+    Orch -. spawn .-> TIA["test-implementation<br/>TDD Red"]
+    Orch -. spawn .-> ImpA["implementation<br/>TDD Green"]
+    Orch -. spawn .-> TstA["testing"]
+    Orch -. spawn .-> BugA["bug-fix"]
+    BDA & DDA & TDA & TIA & ImpA & TstA & BugA <-->|"read/write"| FS[(".dev-workflow/<br/>docs/<br/>src/<br/>tests/")]
+    Orch <-. read .-> FS
 ```
 
 - オーケストレータはユーザとの長期対話を担当。設計ドキュメントやコードは原則書かない。
@@ -24,35 +24,38 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[要件入力<br/>ファイル or チャット] --> B[dev-workflow<br/>初期化]
-    B --> C[basic-design]
-    C --> CR{basic-design-review}
+    A["要件入力<br/>ファイル or チャット"] --> B["dev-workflow<br/>初期化"]
+    B --> C["basic-design"]
+    C --> CR{"basic-design-review"}
     CR -->|fail| C
-    CR -->|pass| C1[機能ID確定<br/>F001, F002, F003 + COMMON 候補]
+    CR -->|pass| C1["機能ID確定<br/>F001, F002, F003 + COMMON 候補"]
 
-    subgraph Batch [フェーズバッチ: 同じフェーズを全機能まとめて実行]
+    subgraph Batch ["フェーズバッチ: 同じフェーズを全機能まとめて → 2 段レビュー"]
       direction TB
-      DDBatch[detailed-design<br/>全機能を並行 spawn]
-      DDBatch --> DDR{detailed-design-review<br/>全機能横断<br/>共通化機会の発見}
-      DDR -->|fail| DDBatch
-      DDR --> TDBatch[test-design<br/>全機能並行]
-      TDBatch --> TDR{test-design-review<br/>全機能横断}
-      TDR -->|fail| TDBatch
-      TDR --> TIBatch[test-implementation<br/>TDD Red, 全機能並行]
-      TIBatch --> TIR{test-implementation-review}
-      TIR -->|fail| TIBatch
-      TIR --> ImplBatch[implementation<br/>COMMON 先行 → 各機能<br/>TDD Green]
-      ImplBatch --> IR{implementation-review<br/>重複/共通化検出}
-      IR -->|fail| ImplBatch
-      IR --> TestBatch[testing 全機能並行]
-      TestBatch --> TR{testing-review}
+      DDBatch["detailed-design<br/>全機能を並行 spawn"]
+      DDBatch --> DDR1{"review per_feature<br/>機能ごと並行"}
+      DDR1 -->|fail| DDBatch
+      DDR1 -->|"all pass"| DDR2{"review cross<br/>全機能横断"}
+      DDR2 -->|fail| DDBatch
+      DDR2 --> TDBatch["test-design"]
+      TDBatch --> TDR1{"review per_feature"}
+      TDR1 --> TDR2{"review cross"}
+      TDR2 --> TIBatch["test-implementation<br/>TDD Red"]
+      TIBatch --> TIR1{"review per_feature"}
+      TIR1 --> TIR2{"review cross"}
+      TIR2 --> ImplBatch["implementation<br/>COMMON 先行 → 各機能<br/>TDD Green"]
+      ImplBatch --> IR1{"review per_feature"}
+      IR1 --> IR2{"review cross<br/>重複/共通化検出"}
+      IR2 --> TestBatch["testing"]
+      TestBatch --> TR1{"review per_feature"}
+      TR1 --> TR2{"review cross"}
     end
 
     C1 --> DDBatch
-    TR -->|fail<br/>未実施あり| TestBatch
-    TR -->|pass + Fail なし| L[最終レポート<br/>00_final_report.md]
-    TR -->|pass + Fail あり| J[bug-fix<br/>5ステップ反復]
-    J --> JR{bug-fix-review}
+    TR2 -->|"fail<br/>未実施あり"| TestBatch
+    TR2 -->|"pass + Fail なし"| L["最終レポート<br/>00_final_report.md"]
+    TR2 -->|"pass + Fail あり"| J["bug-fix<br/>5ステップ反復"]
+    J --> JR{"bug-fix-review"}
     JR -->|fail| J
     JR -->|pass_but_open| J
     JR -->|pass_and_verified| TestBatch
@@ -60,9 +63,9 @@ flowchart TD
 
 **重要なポイント:**
 - フェーズはバッチで進む (機能ごとに最後まで通さない)
-- 各フェーズは全機能の作業が揃ってからレビュー → 次フェーズへ
-- レビューは **横断的な一貫性** と **共通化の機会** を検出
-- 改修・新機能追加で1機能だけ進める場合も同じフロー (バッチ対象が1機能になるだけ)
+- 各フェーズは全機能の作業が揃ってから **個別レビュー (per_feature, 並行) → 横断レビュー (cross, 1回)** の 2 段ゲートを通って初めて次フェーズへ
+- 個別レビューは「per-feature 内の整合」を、横断レビューは「機能間の一貫性と共通化機会」をそれぞれ集中して検証
+- 改修・新機能追加で1機能だけ進める場合も同じフロー (バッチ対象が1機能になるだけで、cross も自動的に縮退)
 
 ## TDD の規律
 
