@@ -676,6 +676,7 @@ dev-workflow で改修したい。
 **前提のおさらい:**
 - スキル本体 (SKILL.md と resources/) は **`~/.claude/skills/` に1回だけ** 配置
 - プロジェクト直下には **プロジェクト固有のルールだけ** を置く (進捗状態 `.dev-workflow/` と一緒)
+- ルールは **2 層** に分けて配置: `stack/` (言語/FW 共通) と `project/` (本プロジェクト固有)
 - スキル本体を丸ごと上書きする「層A」は Advanced 機能 (通常は不要)
 
 ### 起動するスキルを切り替える
@@ -687,20 +688,30 @@ dev-workflow で改修したい。
 
 `dev-workflow-overlay` は `dev-workflow` のラッパー。プロジェクトルールを読み込んでから、内部でベースの dev-workflow 手順を踏襲し、サブエージェント spawn 時にルールをブリーフに重ねる。**ベース層は一切書き換えない**。
 
-### 標準: ルールだけプロジェクト直下に置く (層B)
+### 標準: ルールを 2 層に分けてプロジェクト直下に置く (層B)
 
 ```mermaid
 flowchart TD
     User[ユーザ] -.invoke.-> Overlay[dev-workflow-overlay]
-    Overlay -->|1. Read| Rules[(project .dev-workflow rules)]
-    Overlay -->|2. Read & follow| BaseOrch[base: ~/.claude/skills/dev-workflow/]
-    Overlay -->|3. spawn with overlay| BaseSkill[base: ~/.claude/skills/&lt;name&gt;/]
+    Overlay -->|1a Read stack| RulesStack[(project .dev-workflow rules stack)]
+    Overlay -->|1b Read project| RulesProject[(project .dev-workflow rules project)]
+    Overlay -->|2 Read and follow| BaseOrch[base ~/.claude/skills/dev-workflow/]
+    Overlay -->|3 spawn with merged overlay| BaseSkill[base ~/.claude/skills/各スキル]
     BaseSkill <-->|read write| Files[(.dev-workflow docs src tests)]
 ```
 
-#### 層B: ルールの追加/部分上書き — `<project>/.dev-workflow/rules/<phase>.md` (**標準**)
+ルールは **2 層** に分けて配置する:
 
-スキル丸ごと書き直さず、特定のルールだけを **追加/置き換え/無効化** したいケース。各フェーズ・各レビューに対応するルールファイルを置く。
+| 層        | 配置先                          | 目的                                                   | 例                                        |
+| --------- | ------------------------------- | ------------------------------------------------------ | ----------------------------------------- |
+| `stack`   | `.dev-workflow/rules/stack/`    | 言語/フレームワーク共通 (他プロジェクトで再利用可能)   | Python+FastAPI 用、React 用 …             |
+| `project` | `.dev-workflow/rules/project/`  | このプロジェクトだけの個別事情 (ドメイン用語・例外規約) | 「社内 Slack 通知形式」「監査ログ詳細」 等 |
+
+両方の層を同時に使うことも、片方だけ使うこともできる。
+
+#### 層B: ルールの追加/部分上書き (**標準**)
+
+スキル丸ごと書き直さず、特定のルールだけを **追加/置き換え/無効化** したいケース。各フェーズ・各レビューに対応するルールファイルを `stack/` または `project/` 配下に置く。
 
 各ファイルは `ADD` / `OVERRIDE` / `DISABLE` / `ADDITIONAL_ARTIFACTS` / `REVIEW_EXTRAS` の節を持つ:
 
@@ -769,28 +780,41 @@ PowerShell 例:
 ```powershell
 $ProjectRoot = "$env:USERPROFILE\projects\my-app"
 $RepoRoot    = "$env:USERPROFILE\github\claudecode_settings"   # クローン先に合わせて書き換え
-$RulesDir    = "$ProjectRoot\.dev-workflow\rules"
+$StackDir    = "$ProjectRoot\.dev-workflow\rules\stack"
+$ProjectDir  = "$ProjectRoot\.dev-workflow\rules\project"
 $Templates   = "$RepoRoot\skills\dev-workflow-overlay\resources\project-rules"
 
-New-Item -ItemType Directory -Force -Path $RulesDir | Out-Null
-Copy-Item "$Templates\project-config.md" $RulesDir
-Copy-Item "$Templates\implementation.md" $RulesDir       # 必要な分だけ
-Copy-Item "$Templates\extra-phases.md"   $RulesDir       # 追加フェーズがあれば
+# 2 層のディレクトリを作成
+New-Item -ItemType Directory -Force -Path $StackDir   | Out-Null
+New-Item -ItemType Directory -Force -Path $ProjectDir | Out-Null
+
+# stack 層 (言語/FW 共通) のテンプレをコピー
+Copy-Item "$Templates\stack-config.md"   $StackDir
+Copy-Item "$Templates\implementation.md" $StackDir       # スタック由来の実装規約
+Copy-Item "$Templates\testing.md"        $StackDir       # スタック由来のテスト規約
+
+# project 層 (本プロジェクト固有) のテンプレをコピー
+Copy-Item "$Templates\project-config.md" $ProjectDir
+Copy-Item "$Templates\basic-design.md"   $ProjectDir     # ドメイン固有の機能分割規約
+Copy-Item "$Templates\extra-phases.md"   $ProjectDir     # プロジェクト固有の追加フェーズがあれば
 ```
 
 ルールが何もないプロジェクトでは `dev-workflow-overlay` を呼んでも素のベースと同じ動作なので、常に overlay を起動する運用も可。
 
 ### 優先順位まとめ
 
-| 優先 | 種類                                                                                            |
-| ---- | ----------------------------------------------------------------------------------------------- |
-| 高   | `<project>/.claude/skills/<name>/SKILL.md` (層A: 完全上書き — **Advanced・通常は使わない**)      |
-|      | `<project>/.dev-workflow/rules/<phase>.md` の `OVERRIDE` / `DISABLE` (層B: **標準**)             |
-|      | `<project>/.dev-workflow/rules/<phase>.md` の `ADD` / `ADDITIONAL_ARTIFACTS` (層B: **標準**)     |
-| 低   | ベース `~/.claude/skills/<name>/SKILL.md`                                                       |
+| 優先 | 種類                                                                                                       |
+| ---- | ---------------------------------------------------------------------------------------------------------- |
+| 高   | `<project>/.claude/skills/<name>/SKILL.md` (層A 完全上書き — **Advanced 通常は使わない**)                   |
+|      | `<project>/.dev-workflow/rules/project/<phase>.md` の `OVERRIDE` / `DISABLE` (層B project — **標準**)       |
+|      | `<project>/.dev-workflow/rules/project/<phase>.md` の `ADD` / `ADDITIONAL_ARTIFACTS` (層B project)          |
+|      | `<project>/.dev-workflow/rules/stack/<phase>.md` の `OVERRIDE` / `DISABLE` (層B stack)                      |
+|      | `<project>/.dev-workflow/rules/stack/<phase>.md` の `ADD` / `ADDITIONAL_ARTIFACTS` (層B stack)              |
+| 低   | ベース `~/.claude/skills/<name>/SKILL.md`                                                                  |
 
 矛盾するルールがある場合は上位が勝ち、決定の経緯は `<project>/.dev-workflow/decisions.md` に記録される。
-**通常は層B (ルールファイル) で要件を満たせる**。層A を使う前にまず層B で表現できないか検討する。
+**通常は層B (ルールファイル) で要件を満たせる**。層A を使う前にまず層B (stack または project) で表現できないか検討する。
+両層の `ADD` は **両方適用** (加算)、`OVERRIDE` / `DISABLE` の矛盾は project が勝つ。
 
 ### 起動プロンプト例 (overlay 使用時)
 
@@ -798,8 +822,9 @@ Copy-Item "$Templates\extra-phases.md"   $RulesDir       # 追加フェーズが
 dev-workflow-overlay スキルで開発を始めたい。
 プロジェクトルート: C:\Users\<user>\projects\inventory-app
 
-プロジェクト固有ルールを .dev-workflow/rules/ 配下に配置済み。
-ベースのワークフローはそのまま、プロジェクトルールを優先しながら進めてほしい。
+プロジェクト固有ルールを .dev-workflow/rules/ 配下に 2 層 (stack/ と project/) で配置済み。
+ベースのワークフローはそのまま、stack/ と project/ の両層のルールを合成して
+(project が stack より優先) 進めてほしい。
 要件は docs/requirements/usdm.md にある。
 ```
 
@@ -828,11 +853,17 @@ dev-workflow-overlay スキルで開発を始めたい。
 │  └─ 06_reviews/               # レビュー票 (各フェーズ・各反復)
 │     ├─ basic-design-review.md
 │     └─ <FID>/<phase>-review.md
-├─ .dev-workflow/rules/         # プロジェクト固有ルール (overlay 使用時の標準)
-│  ├─ project-config.md
-│  ├─ <phase>.md                # ADD/OVERRIDE/DISABLE 等
-│  ├─ <phase>-review.md         # レビュー追加チェック
-│  └─ extra-phases.md           # 追加フェーズ定義 (任意)
+├─ .dev-workflow/rules/         # プロジェクト固有ルール (overlay 使用時の標準・2 層構造)
+│  ├─ stack/                    # 言語/フレームワーク共通ルール (他プロジェクトで再利用可能)
+│  │  ├─ stack-config.md
+│  │  ├─ <phase>.md             # ADD/OVERRIDE/DISABLE 等
+│  │  ├─ <phase>-review.md      # レビュー追加チェック
+│  │  └─ extra-phases.md
+│  └─ project/                  # このプロジェクトだけの固有ルール
+│     ├─ project-config.md
+│     ├─ <phase>.md
+│     ├─ <phase>-review.md
+│     └─ extra-phases.md
 │
 │ ※ 通常はこの .dev-workflow/rules/ にプロジェクト固有のルールを置くだけでよい。
 │   スキル本体は ~/.claude/skills/ にインストール済みのものを使う。
