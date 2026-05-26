@@ -69,7 +69,18 @@ $REPO_ROOT/
    │     └─ progress/{project.json, open-questions.md, decisions.md}
    ├─ dev-workflow-overlay/
    │  ├─ SKILL.md
-   │  └─ resources/project-rules/              # プロジェクトカスタマイズ用テンプレ群
+   │  └─ resources/
+   │     ├─ project-rules/                     # プロジェクトカスタマイズ用テンプレ群 (project 層 + 汎用 stack 雛形)
+   │     └─ stack-presets/                     # 言語/FW 別の stack 層プリセット集 (8 種類)
+   │        ├─ python-fastapi/    (7 files)
+   │        ├─ python-django/     (7 files)
+   │        ├─ go-stdlib-chi/     (7 files)
+   │        ├─ typescript-nextjs/ (7 files)
+   │        ├─ typescript-react-vite/ (7 files)
+   │        ├─ react-native/      (7 files)
+   │        ├─ java-spring-boot/  (7 files)
+   │        ├─ ruby-rails/        (7 files)
+   │        └─ README.md
    ├─ basic-design/        (+ resources/)
    ├─ basic-design-review/ (+ resources/)
    ├─ detailed-design/     (+ resources/)
@@ -921,37 +932,100 @@ description: 実装後にセキュリティ観点の専門レビューを行う
 - `gating: blocks_next_phase_on_fail` ならベースのレビューゲートと同等に「pass しないと進めない」
 - `gating: warn_only_on_fail` なら警告のみで進む (`decisions.md` に記録)
 
+### スタックプリセット (stack-presets) — `stack/` 層をゼロから書かずに済ませる
+
+`stack/` 層 (言語/フレームワーク共通ルール) は、よく使うスタックについて **完成済みのプリセット** を `dev-workflow-overlay` 同梱で 8 種類用意してある。新規プロジェクト立ち上げ時は、該当プリセットを `stack/` にコピーするだけで、その技術スタック向けの規約 7 ファイルが一気に揃う。
+
+| プリセット名               | 想定スタック                                        | 主要ツール (テスト / DB / Lint)                                        |
+| -------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------- |
+| `python-fastapi`           | Python 3.13 + FastAPI 0.115 + SQLAlchemy 2 (async)  | pytest / pytest-asyncio / ruff / mypy --strict / uv                    |
+| `python-django`            | Python 3.13 + Django 5.x + DRF                      | pytest-django / factory-boy / ruff / mypy (django-stubs)               |
+| `go-stdlib-chi`            | Go 1.23 + net/http + chi v5 + sqlc                  | go test -race / testify / testcontainers-go / golangci-lint            |
+| `typescript-nextjs`        | TypeScript 5.7 + Next.js 15 (App Router) + React 19 | Vitest または Jest / Playwright / ESLint / msw / Prisma                |
+| `typescript-react-vite`    | TypeScript 5.7 + React 19 + Vite (SPA)              | Vitest または Jest / Playwright / TanStack Query / msw                 |
+| `react-native`             | TypeScript + React Native 0.76 + Expo SDK 52        | Jest (jest-expo) / @testing-library/react-native / Maestro または Detox |
+| `java-spring-boot`         | Java 21 + Spring Boot 3.4 + Spring Data JPA         | JUnit 5 / AssertJ / Mockito / Testcontainers / Spotless / Flyway       |
+| `ruby-rails`               | Ruby 3.4 + Rails 8.x + Hotwire                      | RSpec / FactoryBot / Capybara + Cuprite / RuboCop / Brakeman / SimpleCov |
+
+各プリセットは以下の 7 ファイル構成で統一されている (そのまま `.dev-workflow/rules/stack/` にコピーして使う):
+
+```
+<preset-name>/
+├─ stack-config.md            ← 言語/FW/規約/CI (必ず読まれる)
+├─ detailed-design.md         ← FW 固有の設計パターン
+├─ test-implementation.md     ← テストランナー作法・フィクスチャ
+├─ implementation.md          ← 言語慣習・エラー処理・パフォーマンス
+├─ testing.md                 ← カバレッジ計測・E2E 実行
+├─ implementation-review.md   ← 実装レビュー追加観点 (per_feature + cross)
+└─ testing-review.md          ← テスト結果レビュー追加観点 (per_feature + cross)
+```
+
+格納場所 (REPO 内 / インストール後共通):
+
+```
+$REPO_ROOT/skills/dev-workflow-overlay/resources/stack-presets/<preset-name>/
+~/.claude/skills/dev-workflow-overlay/resources/stack-presets/<preset-name>/   # インストール後
+```
+
+プリセットの詳細・選び方は `stack-presets/README.md` を参照。
+ここに無いスタック (例: ASP.NET Core / Kotlin Spring / Flutter) は、最も近いプリセットを丸ごとコピーして書き換える運用を推奨 (作り方も `stack-presets/README.md` に記載)。
+
+**TypeScript 系のテストランナー選定:** `typescript-nextjs` / `typescript-react-vite` / `react-native` は Vitest / Jest を両論併記しているので、project 層 `project-config.md` で採用理由を明記する。
+
 ### 導入手順
 
 1. プロジェクト直下に `.dev-workflow/rules/` ディレクトリを作る
-2. ベース `dev-workflow-overlay` スキル同梱のテンプレ集 (`$REPO_ROOT/skills/dev-workflow-overlay/resources/project-rules/` または インストール後の `~/.claude/skills/dev-workflow-overlay/resources/project-rules/`) から必要なファイルだけコピー
-3. `ADD` / `OVERRIDE` / `DISABLE` 等を編集
-4. (必要なら) `<project>/.claude/skills/<name>/SKILL.md` で完全上書きするスキルを追加
-5. (必要なら) `extra-phases.md` に追加フェーズを定義
-6. Claude Code への起動時、`dev-workflow` ではなく **`dev-workflow-overlay`** を呼ぶ
+2. **stack 層** はスタックに合うプリセットを `stack-presets/<preset-name>/` から **丸ごと** `.dev-workflow/rules/stack/` にコピー (前節の表から選ぶ)
+3. **project 層** は `project-rules/` から `project-config.md` を中心に、必要なフェーズ別ルールファイルをコピーして編集
+4. コピーした各ファイルの `ADD` / `OVERRIDE` / `DISABLE` 等を、プロジェクト実態に合わせて編集
+5. (必要なら) `<project>/.claude/skills/<name>/SKILL.md` で完全上書きするスキルを追加
+6. (必要なら) `project/extra-phases.md` に追加フェーズを定義
+7. Claude Code への起動時、`dev-workflow` ではなく **`dev-workflow-overlay`** を呼ぶ
 
-PowerShell 例:
+PowerShell 例 (Python+FastAPI プロジェクトの場合):
 
 ```powershell
 $ProjectRoot = "$env:USERPROFILE\projects\my-app"
 $RepoRoot    = "$env:USERPROFILE\github\claudecode_settings"   # クローン先に合わせて書き換え
 $StackDir    = "$ProjectRoot\.dev-workflow\rules\stack"
 $ProjectDir  = "$ProjectRoot\.dev-workflow\rules\project"
+$Presets     = "$RepoRoot\skills\dev-workflow-overlay\resources\stack-presets"
 $Templates   = "$RepoRoot\skills\dev-workflow-overlay\resources\project-rules"
 
 # 2 層のディレクトリを作成
 New-Item -ItemType Directory -Force -Path $StackDir   | Out-Null
 New-Item -ItemType Directory -Force -Path $ProjectDir | Out-Null
 
-# stack 層 (言語/FW 共通) のテンプレをコピー
-Copy-Item "$Templates\stack-config.md"   $StackDir
-Copy-Item "$Templates\implementation.md" $StackDir       # スタック由来の実装規約
-Copy-Item "$Templates\testing.md"        $StackDir       # スタック由来のテスト規約
+# stack 層: プリセットを丸ごとコピー (Python+FastAPI の例)
+$Preset = "python-fastapi"   # ← 適用したいプリセット名に置換
+Copy-Item "$Presets\$Preset\*.md" $StackDir
 
 # project 層 (本プロジェクト固有) のテンプレをコピー
 Copy-Item "$Templates\project-config.md" $ProjectDir
 Copy-Item "$Templates\basic-design.md"   $ProjectDir     # ドメイン固有の機能分割規約
 Copy-Item "$Templates\extra-phases.md"   $ProjectDir     # プロジェクト固有の追加フェーズがあれば
+```
+
+bash 例:
+
+```bash
+PROJECT_ROOT="$HOME/projects/my-app"
+REPO_ROOT="$HOME/github/claudecode_settings"
+STACK_DIR="$PROJECT_ROOT/.dev-workflow/rules/stack"
+PROJECT_DIR="$PROJECT_ROOT/.dev-workflow/rules/project"
+PRESETS="$REPO_ROOT/skills/dev-workflow-overlay/resources/stack-presets"
+TEMPLATES="$REPO_ROOT/skills/dev-workflow-overlay/resources/project-rules"
+
+mkdir -p "$STACK_DIR" "$PROJECT_DIR"
+
+# stack 層: プリセットを丸ごとコピー
+PRESET="python-fastapi"
+cp "$PRESETS/$PRESET"/*.md "$STACK_DIR/"
+
+# project 層
+cp "$TEMPLATES/project-config.md" "$PROJECT_DIR/"
+cp "$TEMPLATES/basic-design.md"   "$PROJECT_DIR/"
+cp "$TEMPLATES/extra-phases.md"   "$PROJECT_DIR/"
 ```
 
 ルールが何もないプロジェクトでは `dev-workflow-overlay` を呼んでも素のベースと同じ動作なので、常に overlay を起動する運用も可。
