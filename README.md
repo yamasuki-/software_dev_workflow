@@ -33,6 +33,7 @@
 | `testing-review`                | 全テスト完了確認 (未実施/実施不可で終わっていないか)  |
 | `bug-fix`                       | 不具合修正 (原因調査→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ。設計変更が必要な場合は **設計フェーズに差し戻し** て再走させる。bug-fix 自身は設計を直接編集しない) |
 | `bug-fix-review`                | 反復ごとに 5ステップの規律違反を検証                  |
+| `auto-check`                    | 機械チェックゲート。各 LLM レビューの直前に走り、`stack-config.md` 由来の MUST/SHOULD/MAY ツール (linter / typecheck / markdownlint / mermaid-cli / カバレッジ等) を順次実行する。MUST 失敗があればフェーズ差し戻し。未インストールツールは skip + warn 扱い |
 
 通常は `dev-workflow` を起動する。`dev-workflow` が状況を判断して各フェーズスキルを **別エージェントとして spawn** する。
 直接フェーズスキルを起動することもできる (例: 既存プロジェクトの途中から `implementation` だけ使いたい場合)。
@@ -67,6 +68,11 @@ $REPO_ROOT/
    │  ├─ SKILL.md
    │  └─ resources/                            # 各スキルに必要なテンプレートは自身の resources/ に同梱
    │     └─ progress/{project.json, open-questions.md, decisions.md}
+   ├─ auto-check/                              # 機械チェックゲート (各 LLM レビューの前段で走る)
+   │  ├─ SKILL.md
+   │  └─ resources/
+   │     ├─ scripts/                           # check-tools / run-checks / parse-stack-config / check-mermaid
+   │     └─ report-template.md
    ├─ dev-workflow-overlay/
    │  ├─ SKILL.md
    │  └─ resources/
@@ -971,6 +977,183 @@ $REPO_ROOT/skills/dev-workflow-overlay/resources/stack-presets/<preset-name>/
 ここに無いスタック (例: ASP.NET Core / Kotlin Spring / Flutter) は、最も近いプリセットを丸ごとコピーして書き換える運用を推奨 (作り方も `stack-presets/README.md` に記載)。
 
 **TypeScript 系のテストランナー選定:** `typescript-nextjs` / `typescript-react-vite` / `react-native` は Vitest / Jest を両論併記しているので、project 層 `project-config.md` で採用理由を明記する。
+
+### 自動チェックゲート (auto-check)
+
+各フェーズの **LLM レビューの直前** に、ツールによる **機械チェック** (`auto-check` スキル) が走る。LLM では判定できない or 判定が不安定な観点 (構文/型/lint/カバレッジ/typo/リンク切れ/重複コード/依存脆弱性) を機械的に確定させることで:
+
+- LLM レビューが安定し、トークン消費も減る
+- 仕様書・コードの低レベルな品質問題を早期に検出
+- 設計意図・命名・横断一貫性など、ツールでは判定できない観点に LLM レビューが集中できる
+
+#### 動作
+
+```
+フェーズ完了
+  → auto-check (per_feature) … MUST/SHOULD/MAY を順次実行
+    → MUST fail なら本フェーズに差し戻し
+    → MUST pass → LLM per_feature レビュー
+      → 全機能 pass → auto-check (cross) … 横断ツール (jscpd 等) があれば
+        → MUST pass → LLM cross レビュー
+          → pass → 次フェーズへ
+```
+
+#### ツールの 3 階層
+
+| 階層 | 失敗時 | 用途 |
+|---|---|---|
+| **MUST** | フェーズ差し戻し | スタック標準の必須ツール (linter / typecheck / カバレッジ等) |
+| **SHOULD** | warn のみ。LLM が判断 | 強く推奨だが project 判断で猶予あり (依存脆弱性 / 複雑度) |
+| **MAY** | info のみ | 任意 (mutation testing / リンク切れ等) |
+
+実行するコマンドは **`stack-config.md` の「自動チェック (MUST / SHOULD / MAY)」セクション** で宣言する。8 種のスタックプリセットすべてに、そのスタック向けのコマンドが事前定義されている。
+
+#### 未インストールツールの扱い
+
+ローカル開発でツールが入っていない場合は **skip + warn** でゲートを通す。CI 側では事前に全 MUST ツールがインストール済みである前提とする (CI 設定で担保)。
+
+#### 横断ツール (全スタック共通、stack-presets で既定)
+
+| ツール | 階層 | 用途 |
+|---|---|---|
+| markdownlint-cli2 | MUST | Markdown 構文 |
+| mermaid-cli (mmdc) | MUST | Mermaid ブロックのパース検証 |
+| textlint + prh | SHOULD | 日本語表記揺れ |
+| typos | SHOULD | typo 検出 (高速) |
+| lychee | MAY | リンク切れ検出 |
+| jscpd | MAY (cross) | 重複コード検出 |
+| semgrep | SHOULD | パターン静的解析 (各スタック preset で組み込み) |
+| 依存脆弱性 (pip-audit / npm audit / govulncheck / OWASP / bundle audit) | SHOULD | スタック別 |
+
+詳細は `auto-check/SKILL.md` を参照。
+
+#### 使い方
+
+##### 1. ツールのインストール
+
+横断ツール (8 スタック共通) はワンセットでインストールしておけば全プロジェクトで再利用できる。
+
+bash / macOS / Linux:
+
+```bash
+# Node 系 (markdownlint / mermaid-cli / textlint / jscpd)
+npm install -g markdownlint-cli2 @mermaid-js/mermaid-cli textlint textlint-rule-preset-ja-technical-writing jscpd
+
+# Rust 系 (typos / lychee) — cargo が必要
+cargo install typos-cli lychee
+
+# Python 系 (semgrep) — uv または pipx
+pipx install semgrep
+```
+
+PowerShell (Windows):
+
+```powershell
+npm install -g markdownlint-cli2 "@mermaid-js/mermaid-cli" textlint textlint-rule-preset-ja-technical-writing jscpd
+cargo install typos-cli lychee
+pipx install semgrep
+```
+
+スタック別ツール (ruff / mypy / golangci-lint / gradle / bundler 等) はプロジェクトの依存マネージャ経由で導入する。各 stack-presets の `stack-config.md` の install hint (コマンドコメント `# install: ...`) を参照。
+
+##### 2. 自動起動 (通常運用)
+
+`dev-workflow` / `dev-workflow-overlay` を起動して開発を進めると、各フェーズ完了時に **自動で auto-check が spawn される**。ユーザの追加操作は不要。
+
+LLM レビューの直前で auto-check が走り、結果は `docs/06_reviews/<FID>/<phase>-auto-check.md` に保存される。
+
+##### 3. 手動実行 (デバッグ / CI 設計時)
+
+特定フェーズの auto-check だけを試したい場合:
+
+bash:
+
+```bash
+bash ~/.claude/skills/auto-check/resources/scripts/run-checks.sh \
+  --project-root "$HOME/projects/my-app" \
+  --phase implementation \
+  --mode per_feature \
+  --target F001
+```
+
+PowerShell:
+
+```powershell
+pwsh "$env:USERPROFILE\.claude\skills\auto-check\resources\scripts\run-checks.ps1" `
+  -ProjectRoot "$env:USERPROFILE\projects\my-app" `
+  -Phase implementation `
+  -Mode per_feature `
+  -Target F001
+```
+
+exit code:
+- `0` — MUST 全 pass
+- `10` — MUST fail あり
+- `2` — 引数 / 設定エラー (`stack-config.md` が無い等)
+
+##### 4. ツール存在確認
+
+事前にどのツールが入っていないか確認したい場合:
+
+```bash
+bash ~/.claude/skills/auto-check/resources/scripts/check-tools.sh \
+  markdownlint-cli2 mmdc textlint typos lychee jscpd semgrep
+```
+
+各行が `<tool>\tOK\t<version>` か `<tool>\tMISSING\t-` で出力される。
+
+##### 5. 一時的にスキップする
+
+`auto-check` を走らせず先に進めたい場合 (例: CI が止まる本番障害対応中):
+
+`<PROJECT_ROOT>/.dev-workflow/decisions.md` に以下を記録すると `dev-workflow` がそのフェーズの auto-check spawn をスキップする:
+
+```markdown
+## YYYY-MM-DD: auto-check スキップ承認
+- 対象: <phase> (例: implementation)
+- 期間: 当該フェーズ 1 回のみ / 恒久的
+- 理由: <理由>
+- 承認者: <ユーザ名>
+- リカバリ: CI 側で全 MUST ツールが走ることを確認済み
+```
+
+恒久的に CI 側に寄せたい場合は `project-config.md` に「auto-check は CI 側で実施」と明記し、`stack-config.md` の「自動チェック」セクションを DISABLE する。
+
+##### 6. CI 連携
+
+ローカルではツール未インストールでも skip + warn でゲートが通るため、**MUST ツールが必ず走ることを CI で担保する**。各 stack-presets の `stack-config.md` に書かれた MUST コマンドを GitHub Actions / GitLab CI で実行する例:
+
+```yaml
+# .github/workflows/auto-check.yml (Python+FastAPI の例)
+name: auto-check
+on: [pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install -g markdownlint-cli2 @mermaid-js/mermaid-cli
+      - run: pip install uv
+      - run: uv sync --frozen
+      - run: markdownlint-cli2 "**/*.md" "#node_modules"
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy src
+      - run: uv run pytest --cov=src --cov-branch --cov-fail-under=80
+```
+
+##### 7. レポートの読み方
+
+auto-check 実行後、以下に Markdown レポートが生成される:
+
+| mode | パス |
+|---|---|
+| per_feature | `docs/06_reviews/<FID>/<phase>-auto-check.md` |
+| cross | `docs/06_reviews/cross/<phase>-auto-check.md` |
+
+レポートには **サマリ表 (MUST/SHOULD/MAY × 実行/pass/fail/skipped)**、各コマンドの **exit code・実行時間・出力先頭 50 行**、**判定 (PASS/FAIL)** が記録される。LLM レビューはこのレポートを読んで SHOULD warning や MAY info を判断する。
 
 ### 導入手順
 

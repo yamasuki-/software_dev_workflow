@@ -202,6 +202,31 @@ description: 実装後にセキュリティ観点の追加レビューを行う
 
 追加フェーズも含め、すべてのフェーズで `status.json` の `phases.<id>` を更新する。`gating: blocks_next_phase_on_fail` の場合、レビューが pass しないと次に進めない (ベースのレビューゲート規律を継承)。
 
+### Step 6 : auto-check (機械チェックゲート) の取り扱い
+
+ベース dev-workflow は各 per_feature レビューの直前に `auto-check` スキルを spawn する 3 段ゲートを持つ。overlay でもこれを **そのまま継承** し、2 層ルールから読み取った `stack-config.md` の「自動チェック (MUST / SHOULD / MAY)」セクションを `auto-check` のスタック設定として渡す。
+
+**動作:**
+- overlay 起動時、`<PROJECT_ROOT>/.dev-workflow/rules/stack/stack-config.md` の存在を確認
+- 存在しなければ `auto-check` はベース側で skip 扱い (overlay 未使用の素の dev-workflow と同じ挙動)
+- 存在すれば各レビュー spawn の直前で `auto-check` を spawn (per_feature N 並行 / cross 1回)
+- 未インストールツールは `auto-check` が skip + warn 扱いで処理 (overlay は介入しない)
+
+**ブリーフへの上乗せ:**
+auto-check spawn のブリーフ末尾に以下を追記:
+
+```
+【overlay 経由情報】
+- stack-config.md 配置: <PROJECT_ROOT>/.dev-workflow/rules/stack/stack-config.md
+- project 層上書き有無: <yes|no>
+  (yes の場合 <PROJECT_ROOT>/.dev-workflow/rules/project/stack-config.md も Read してマージ)
+- project ルールが auto-check を DISABLE / 部分的に DISABLE している場合は project-config.md を優先
+```
+
+**未インストールツール時の運用:**
+- ローカル開発では skip + warn でゲートを通す (ベース仕様)
+- CI 側では必ず全 MUST が走る前提。overlay は CI 設定 (例: `.github/workflows/`) には触らないが、プロジェクトの `project-config.md` の `CI 必須チェック` セクションに MUST ツール一覧を載せるよう促す
+
 ## ベースに対する非破壊性の保証
 
 本スキルは以下を **絶対に変更しない**:

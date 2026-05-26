@@ -116,6 +116,63 @@ assets/
 - `docs/02_detailed_design/<FID>/native-modules.md` (使用するネイティブモジュール、permission 一覧)
 - `docs/02_detailed_design/<FID>/a11y-design.md` (a11y 要件)
 
+## 自動チェック (MUST / SHOULD / MAY)
+
+auto-check スキルが本セクションを読み、各フェーズの直前に MUST/SHOULD/MAY を順次実行する。
+React Native は Jest を既定としているが、project-config.md で Vitest を選んだ場合はコマンドを差し替える。
+
+### 全フェーズ共通
+
+#### MUST
+- markdownlint-cli2 "**/*.md" "#node_modules"   # install: npm install -g markdownlint-cli2
+- bash ~/.claude/skills/auto-check/resources/scripts/check-mermaid.sh .   # install: npm install -g @mermaid-js/mermaid-cli
+
+#### SHOULD
+- textlint docs/**/*.md   # install: npm install -g textlint textlint-rule-preset-ja-technical-writing
+- typos --no-check-filenames .   # install: cargo install typos-cli
+
+#### MAY
+- lychee --no-progress "**/*.md"   # install: cargo install lychee
+
+### test-implementation 固有
+
+#### MUST
+- pnpm jest --listTests
+- pnpm jest --bail   # 期待: 全テスト Red
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
+### implementation 固有
+
+#### MUST
+- pnpm typecheck   # = tsc --noEmit
+- pnpm lint        # = eslint . (react-native plugin 有効)
+- pnpm format:check
+- pnpm expo doctor   # install: pnpm add -D expo (バージョン整合チェック)
+
+#### SHOULD
+- pnpm audit --audit-level=high
+- semgrep --config=p/typescript --error .   # install: pip install semgrep
+
+#### MAY
+- jscpd src/ app/   # install: npm install -g jscpd
+
+### testing 固有
+
+#### MUST
+- pnpm jest --coverage --ci
+
+#### SHOULD
+- (Maestro / Detox は実機/シミュレータ環境が必要。CI で別 job として扱うのが現実的)
+
+#### MAY
+- pnpm maestro test e2e/maestro/   # install: https://maestro.mobile.dev (ローカル+CI 設定要)
+- npx --yes detox test --configuration ios.sim.release   # Detox 採用時
+
 ## REVIEW_EXTRAS (スタック由来の追加レビュー観点)
 - `accessibilityLabel` / `Role` が主要操作にあるか
 - SafeAreaView 適用が漏れていないか

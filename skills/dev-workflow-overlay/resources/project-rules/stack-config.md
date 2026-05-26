@@ -59,3 +59,32 @@
 ## REVIEW_EXTRAS (スタック由来の追加レビュー観点)
 - 例: 全公開関数に型注釈があるか (mypy --strict が pass か)
 - 例: secrets はハードコーディング禁止 (環境変数経由)
+
+## 自動チェック (MUST / SHOULD / MAY)
+
+> auto-check スキルが本セクションを読み、各フェーズの直前に MUST/SHOULD/MAY を順次実行する。
+> 既存のスタックプリセット (`stack-presets/<preset>/stack-config.md`) を参考に、本プロジェクトのスタックに合わせて記述する。
+> 未インストールツールは skip + warn 扱いとなる。
+
+### 全フェーズ共通
+
+#### MUST
+- (例) markdownlint-cli2 "**/*.md" "#node_modules"   # install: npm install -g markdownlint-cli2
+- (例) bash ~/.claude/skills/auto-check/resources/scripts/check-mermaid.sh .   # install: npm install -g @mermaid-js/mermaid-cli
+
+#### SHOULD
+- (例) typos --no-check-filenames .
+
+#### MAY
+- (例) lychee --no-progress "**/*.md"
+
+### <phase> 固有 (basic-design / detailed-design / test-design / test-implementation / implementation / testing)
+
+#### MUST
+- (フェーズで必須のツール。fail でゲート停止)
+
+#### SHOULD
+- (推奨ツール。warn 扱い)
+
+#### MAY
+- (任意ツール。info のみ)

@@ -12,6 +12,28 @@ description: detailed-design フェーズ完了時に、機能の詳細設計成
 - 戻り値: `summary` / `result` / `issues[]` / `next_action` / `updated_files`。
 - レビュー票は `docs/06_reviews/<FID>/detailed-design-review.md`。
 
+## auto-check 結果の取り扱い (機械チェックゲートと併走)
+
+本レビューは LLM レビューゲートの第 2 段。直前に **auto-check** スキル (機械チェックゲート) が走り、`stack-config.md` 由来の MUST/SHOULD/MAY ツールで構文/型/lint/カバレッジ等を判定済みである。
+
+- **auto-check MUST が fail** している場合、本レビューは spawn されない (オーケストレータがフェーズ差し戻し)。本レビューが起動した時点で MUST は pass (または skipped) と仮定してよい
+- **auto-check の SHOULD warning / MAY info / skipped_missing_tools** は、オーケストレータが本レビューのブリーフに以下の形で渡してくる:
+
+  ```
+  【auto-check 結果サマリ】
+  - report: docs/06_reviews/<FID>/<phase>-auto-check.md
+  - SHOULD warnings: N 件 (詳細はレポート)
+  - MAY info: N 件
+  - skipped_missing_tools: [<ツール名> ...]
+  ```
+
+- 本レビューは:
+  1. auto-check レポートを **必ず Read** する
+  2. SHOULD warning を 1 件ずつ判定: accept (理由を decisions.md に記録) か reject (修正させる) か
+  3. skipped_missing_tools は `open-questions.md` に「ローカル環境で <tool> 未インストール、CI で必ず走ること」として確認事項として残す
+  4. MAY info は参考情報。レビュー票末尾に箇条書きで列挙
+  5. 機械チェックで判定済みの観点 (構文/型/lint/カバレッジ) は **再判定しない**。設計意図・命名・読みやすさ・横断一貫性などツールでは判定できない観点に集中する
+
 ## 役割
 
 **インプット = 基本設計4ドキュメント + 要件**、**アウトプット = 詳細設計5ドキュメント** の整合性を確認する。

@@ -116,6 +116,76 @@ src/
 - `docs/02_detailed_design/<FID>/zod-schemas.md` (server/client で共有する zod スキーマの一覧)
 - `docs/02_detailed_design/<FID>/server-actions.md` (server action のシグネチャと振る舞い)
 
+## 自動チェック (MUST / SHOULD / MAY)
+
+auto-check スキルが本セクションを読み、各フェーズの直前に MUST/SHOULD/MAY を順次実行する。
+Vitest と Jest はどちらか採用したほうのコマンドだけを残すこと (project-config.md で選定)。
+
+### 全フェーズ共通
+
+#### MUST
+- markdownlint-cli2 "**/*.md" "#node_modules"   # install: npm install -g markdownlint-cli2
+- bash ~/.claude/skills/auto-check/resources/scripts/check-mermaid.sh .   # install: npm install -g @mermaid-js/mermaid-cli
+
+#### SHOULD
+- textlint docs/**/*.md   # install: npm install -g textlint textlint-rule-preset-ja-technical-writing
+- typos --no-check-filenames .   # install: cargo install typos-cli
+
+#### MAY
+- lychee --no-progress "**/*.md"   # install: cargo install lychee
+
+### detailed-design 固有
+
+#### MUST
+- (なし)
+
+#### SHOULD
+- npx --yes @redocly/cli lint docs/02_detailed_design/**/api-schema.yaml   # OpenAPI スニペットがあれば
+
+#### MAY
+- (なし)
+
+### test-implementation 固有
+
+#### MUST
+- pnpm vitest --run --reporter=verbose   # 期待: 全テスト Red (Vitest 採用時)
+- # pnpm jest --listTests && pnpm jest --bail   # Jest 採用時はこちらに切り替え
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
+### implementation 固有
+
+#### MUST
+- pnpm typecheck   # = tsc --noEmit
+- pnpm lint        # = eslint .
+- pnpm format:check   # = prettier --check .
+- pnpm build       # next build (型・bundle 整合)
+
+#### SHOULD
+- pnpm audit --audit-level=high
+- semgrep --config=p/typescript --error .   # install: pip install semgrep
+
+#### MAY
+- jscpd src/   # install: npm install -g jscpd
+- npx --yes size-limit   # bundle サイズ監視 (設定があれば)
+
+### testing 固有
+
+#### MUST
+- pnpm vitest --run --coverage   # Vitest 採用時。Jest なら pnpm jest --coverage
+- pnpm playwright test --reporter=list
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- npx --yes @axe-core/cli http://localhost:3000   # ローカルで起動済みの場合のみ
+- lighthouse-ci autorun   # NFR に Web Vitals 規定があれば
+
 ## REVIEW_EXTRAS (スタック由来の追加レビュー観点)
 - `'use client'` が必要箇所だけに付いているか (Server Component を不必要にクライアント化していないか)
 - 環境変数アクセスが `server/env.ts` 経由か

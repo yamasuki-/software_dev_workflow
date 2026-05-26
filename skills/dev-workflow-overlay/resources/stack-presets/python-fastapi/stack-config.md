@@ -102,6 +102,84 @@ tests/
 - `alembic/versions/<rev>_<FID>_*.py` (DB スキーマ変更時)
 - `docs/02_detailed_design/<FID>/pydantic-schemas.md` (主要 schema の用途説明)
 
+## 自動チェック (MUST / SHOULD / MAY)
+
+auto-check スキルが本セクションを読み、各フェーズの直前に MUST/SHOULD/MAY を順次実行する。
+`#` の右側は install hint。未インストール時は skip + warn として扱われる。
+
+### 全フェーズ共通
+
+#### MUST
+- markdownlint-cli2 "**/*.md" "#node_modules"   # install: npm install -g markdownlint-cli2
+- bash ~/.claude/skills/auto-check/resources/scripts/check-mermaid.sh .   # install: npm install -g @mermaid-js/mermaid-cli
+
+#### SHOULD
+- textlint docs/**/*.md   # install: npm install -g textlint textlint-rule-preset-ja-technical-writing
+- typos --no-check-filenames .   # install: cargo install typos-cli
+
+#### MAY
+- lychee --no-progress "**/*.md"   # install: cargo install lychee
+
+### detailed-design 固有
+
+#### MUST
+- (なし — 設計フェーズではコード未生成)
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
+### test-implementation 固有
+
+#### MUST
+- uv run pytest --collect-only -q   # install: pip install uv
+- uv run pytest --tb=no -q   # 期待 exit code: non-zero (全テスト Red を確認) — auto-check では実行のみ、判定は test-implementation-review に委ねる
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
+### implementation 固有
+
+#### MUST
+- uv run ruff check .   # install: pip install uv
+- uv run ruff format --check .   # install: pip install uv
+- uv run mypy src   # install: pip install uv mypy
+
+#### SHOULD
+- uv run pip-audit   # install: pip install pip-audit
+- semgrep --config=p/python --error .   # install: pip install semgrep
+
+#### MAY
+- jscpd src/ --threshold 5   # install: npm install -g jscpd
+- vulture src/ --min-confidence 80   # install: pip install vulture
+
+### testing 固有
+
+#### MUST
+- uv run pytest --cov=src --cov-branch --cov-fail-under=80 -q   # install: pip install uv pytest-cov
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- uv run mutmut run --paths-to-mutate src/   # install: pip install mutmut
+
+### bug-fix 固有
+
+#### MUST
+- (bug-fix-review が個別判定するため auto-check は走らない)
+
+#### SHOULD
+- (同上)
+
+#### MAY
+- (同上)
+
 ## REVIEW_EXTRAS (スタック由来の追加レビュー観点)
 - 全公開関数に型注釈があるか (`mypy --strict` が pass か)
 - secrets はハードコーディング禁止 (環境変数経由、pydantic-settings で受ける)

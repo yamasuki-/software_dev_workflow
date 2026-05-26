@@ -113,6 +113,64 @@ spec/  または test/
 - `docs/02_detailed_design/<FID>/active-record-models.md` (主要 Model と関連、scope)
 - API がある場合 `docs/02_detailed_design/<FID>/api-schema.yaml` (rswag 等で生成)
 
+## 自動チェック (MUST / SHOULD / MAY)
+
+auto-check スキルが本セクションを読み、各フェーズの直前に MUST/SHOULD/MAY を順次実行する。
+
+### 全フェーズ共通
+
+#### MUST
+- markdownlint-cli2 "**/*.md" "#node_modules"   # install: npm install -g markdownlint-cli2
+- bash ~/.claude/skills/auto-check/resources/scripts/check-mermaid.sh .   # install: npm install -g @mermaid-js/mermaid-cli
+
+#### SHOULD
+- textlint docs/**/*.md   # install: npm install -g textlint textlint-rule-preset-ja-technical-writing
+- typos --no-check-filenames .   # install: cargo install typos-cli
+
+#### MAY
+- lychee --no-progress "**/*.md"   # install: cargo install lychee
+
+### test-implementation 固有
+
+#### MUST
+- bundle exec rspec --dry-run
+- bundle exec rspec --fail-fast   # 期待: 全テスト Red
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
+### implementation 固有
+
+#### MUST
+- bundle exec rubocop
+- bundle exec brakeman -q --no-pager
+- bundle exec erb_lint --lint-all   # ERB 使用時 (install: gem install erb_lint)
+- bundle exec rails db:migrate:status   # 未適用 migration の検出
+
+#### SHOULD
+- bundle audit check --update
+- bundle outdated --strict   # 重大バージョン乖離検出
+- semgrep --config=p/ruby --error .   # install: pip install semgrep
+
+#### MAY
+- jscpd app/   # install: npm install -g jscpd
+- bundle exec brakeman -A   # 詳細スキャン
+
+### testing 固有
+
+#### MUST
+- bundle exec rspec --format progress   # SimpleCov coverage 確認
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- bundle exec rspec --profile 10   # slow test top 10
+- bundle exec mutant run   # mutation testing (採用時)
+
 ## REVIEW_EXTRAS (スタック由来の追加レビュー観点)
 - Fat Controller / Fat Model になっていないか (Service / Query / Form に分離されているか)
 - N+1 が発生していないか (bullet で 0 件か)

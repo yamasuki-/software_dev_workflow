@@ -111,6 +111,72 @@ src/test/java/<group>/<app>/
 - `src/main/resources/db/migration/V<番号>__<FID>_*.sql`
 - `docs/02_detailed_design/<FID>/jpa-entities.md` (主要 Entity の関連説明)
 
+## 自動チェック (MUST / SHOULD / MAY)
+
+auto-check スキルが本セクションを読み、各フェーズの直前に MUST/SHOULD/MAY を順次実行する。
+
+### 全フェーズ共通
+
+#### MUST
+- markdownlint-cli2 "**/*.md" "#node_modules"   # install: npm install -g markdownlint-cli2
+- bash ~/.claude/skills/auto-check/resources/scripts/check-mermaid.sh .   # install: npm install -g @mermaid-js/mermaid-cli
+
+#### SHOULD
+- textlint docs/**/*.md   # install: npm install -g textlint textlint-rule-preset-ja-technical-writing
+- typos --no-check-filenames .   # install: cargo install typos-cli
+
+#### MAY
+- lychee --no-progress "**/*.md"   # install: cargo install lychee
+
+### detailed-design 固有
+
+#### MUST
+- (なし)
+
+#### SHOULD
+- npx --yes @redocly/cli lint docs/02_detailed_design/**/api-schema.yaml   # OpenAPI スニペットがあれば
+
+#### MAY
+- (なし)
+
+### test-implementation 固有
+
+#### MUST
+- ./gradlew compileTestJava
+- ./gradlew test --fail-fast   # 期待: 全テスト Red
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
+### implementation 固有
+
+#### MUST
+- ./gradlew spotlessCheck
+- ./gradlew checkstyleMain checkstyleTest
+- ./gradlew compileJava compileTestJava
+- ./gradlew assemble
+
+#### SHOULD
+- ./gradlew dependencyCheckAnalyze   # OWASP Dependency-Check plugin
+- semgrep --config=p/java --error .   # install: pip install semgrep
+
+#### MAY
+- jscpd src/main/java   # install: npm install -g jscpd
+
+### testing 固有
+
+#### MUST
+- ./gradlew test jacocoTestReport jacocoTestCoverageVerification
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- ./gradlew pitest   # mutation testing (plugin: gradle-pitest-plugin)
+
 ## REVIEW_EXTRAS (スタック由来の追加レビュー観点)
 - constructor injection になっているか (field/setter injection なし)
 - `@Transactional` の貼り先が Service 層か (Controller / Repository についていないか)

@@ -63,9 +63,41 @@ flowchart TD
 
 **重要なポイント:**
 - フェーズはバッチで進む (機能ごとに最後まで通さない)
-- 各フェーズは全機能の作業が揃ってから **個別レビュー (per_feature, 並行) → 横断レビュー (cross, 1回)** の 2 段ゲートを通って初めて次フェーズへ
+- 各フェーズは全機能の作業が揃ってから **auto-check (機械チェック) → 個別レビュー (per_feature, 並行) → 横断レビュー (cross, 1回)** の **3 段ゲート** を通って初めて次フェーズへ
+- **auto-check** はツール (markdownlint / mermaid-cli / linter / typecheck / カバレッジ等) を MUST/SHOULD/MAY の 3 階層で実行する機械チェック。MUST が pass しなければ LLM レビューに進まない
 - 個別レビューは「per-feature 内の整合」を、横断レビューは「機能間の一貫性と共通化機会」をそれぞれ集中して検証
 - 改修・新機能追加で1機能だけ進める場合も同じフロー (バッチ対象が1機能になるだけで、cross も自動的に縮退)
+
+## 3 段ゲートの動作 (auto-check → per_feature → cross)
+
+各フェーズ完了直後、LLM レビューの前段に必ず **auto-check** が走る。
+
+```mermaid
+flowchart TD
+    Phase[フェーズ作業 全機能 並行 spawn]
+    Phase --> AC1[auto-check mode=per_feature N並行 spawn]
+    AC1 --> AC1R{MUST 全 pass?}
+    AC1R -->|fail| BackAC[該当機能の作業を再 spawn auto-check レポートを briefing に]
+    BackAC --> Phase
+    AC1R -->|pass| R1[LLM レビュー mode=per_feature N並行 spawn]
+    R1 --> R1R{全機能 pass?}
+    R1R -->|fail| Back1[該当機能の作業を再 spawn]
+    Back1 --> Phase
+    R1R -->|pass| AC2[auto-check mode=cross 1回 spawn 横断ツール]
+    AC2 --> AC2R{MUST 全 pass?}
+    AC2R -->|fail| Back2[横断 issue として再 spawn]
+    Back2 --> Phase
+    AC2R -->|pass| R2[LLM 横断レビュー mode=cross 1回 spawn]
+    R2 --> R2R{pass?}
+    R2R -->|fail| Back3[該当機能再 spawn または COMMON 立てる]
+    Back3 --> Phase
+    R2R -->|pass| Next[次フェーズへ]
+```
+
+- **auto-check 自体は新規スキル** (`~/.claude/skills/auto-check/`) として配置
+- 走るツールは `<PROJECT_ROOT>/.dev-workflow/rules/stack/stack-config.md` の「自動チェック (MUST / SHOULD / MAY)」セクションで宣言 (stack-presets が提供するスタックごとのプリセットを使うのが標準)
+- 未インストールツールは **skip + warn** で扱われ、ゲートは止まらない (本来 fail すべきだったケースは CI 側で検出する前提)
+- 横断スキャン系ツール (jscpd / lychee 等) がない場合、cross モードの auto-check は skip 可
 
 ## TDD の規律
 

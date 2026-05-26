@@ -111,6 +111,65 @@ src/
 - `docs/02_detailed_design/<FID>/zod-schemas.md` (form / API response の zod スキーマ)
 - `docs/02_detailed_design/<FID>/queries.md` (TanStack Query の queryKey / staleTime / mutation 一覧)
 
+## 自動チェック (MUST / SHOULD / MAY)
+
+auto-check スキルが本セクションを読み、各フェーズの直前に MUST/SHOULD/MAY を順次実行する。
+Vitest と Jest はどちらか採用したほうのコマンドだけを残すこと (project-config.md で選定)。
+
+### 全フェーズ共通
+
+#### MUST
+- markdownlint-cli2 "**/*.md" "#node_modules"   # install: npm install -g markdownlint-cli2
+- bash ~/.claude/skills/auto-check/resources/scripts/check-mermaid.sh .   # install: npm install -g @mermaid-js/mermaid-cli
+
+#### SHOULD
+- textlint docs/**/*.md   # install: npm install -g textlint textlint-rule-preset-ja-technical-writing
+- typos --no-check-filenames .   # install: cargo install typos-cli
+
+#### MAY
+- lychee --no-progress "**/*.md"   # install: cargo install lychee
+
+### test-implementation 固有
+
+#### MUST
+- pnpm vitest --run --reporter=verbose   # 期待: 全テスト Red (Vitest 採用時)
+- # pnpm jest --listTests && pnpm jest --bail   # Jest 採用時
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
+### implementation 固有
+
+#### MUST
+- pnpm typecheck   # = tsc --noEmit
+- pnpm lint        # = eslint .
+- pnpm format:check   # = prettier --check .
+- pnpm build       # = vite build
+
+#### SHOULD
+- pnpm audit --audit-level=high
+- semgrep --config=p/typescript --error .   # install: pip install semgrep
+
+#### MAY
+- jscpd src/   # install: npm install -g jscpd
+- npx --yes size-limit   # bundle サイズ監視 (設定があれば)
+
+### testing 固有
+
+#### MUST
+- pnpm vitest --run --coverage
+- pnpm playwright test --reporter=list
+
+#### SHOULD
+- npx --yes vitest-axe   # a11y 単体 (設定があれば)
+
+#### MAY
+- npx --yes @axe-core/cli http://localhost:5173   # ローカル起動中の場合
+- lighthouse-ci autorun
+
 ## REVIEW_EXTRAS (スタック由来の追加レビュー観点)
 - `import.meta.env` の直接アクセスがないか (`env.ts` 経由か)
 - API 通信が TanStack Query 経由か (生 fetch を component に書いていないか)

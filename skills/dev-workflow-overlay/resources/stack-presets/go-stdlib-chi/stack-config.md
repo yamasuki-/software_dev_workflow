@@ -105,6 +105,63 @@ api/                    ← OpenAPI / Proto 定義 (該当時)
 - `api/openapi.yaml` (OpenAPI を採用する場合)
 - `docs/02_detailed_design/<FID>/sqlc-queries.md` (主要クエリの意図説明)
 
+## 自動チェック (MUST / SHOULD / MAY)
+
+auto-check スキルが本セクションを読み、各フェーズの直前に MUST/SHOULD/MAY を順次実行する。
+
+### 全フェーズ共通
+
+#### MUST
+- markdownlint-cli2 "**/*.md" "#node_modules"   # install: npm install -g markdownlint-cli2
+- bash ~/.claude/skills/auto-check/resources/scripts/check-mermaid.sh .   # install: npm install -g @mermaid-js/mermaid-cli
+
+#### SHOULD
+- textlint docs/**/*.md   # install: npm install -g textlint textlint-rule-preset-ja-technical-writing
+- typos --no-check-filenames .   # install: cargo install typos-cli
+
+#### MAY
+- lychee --no-progress "**/*.md"   # install: cargo install lychee
+
+### test-implementation 固有
+
+#### MUST
+- go test ./... -run XXX_NoneShould -count=1   # 一旦コンパイル確認
+- go test ./... -count=1   # 期待: 全テスト Red
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
+### implementation 固有
+
+#### MUST
+- gofmt -l . | tee /dev/stderr | (! grep -q .)   # diff 0 件を必須
+- goimports -l . | tee /dev/stderr | (! grep -q .)   # install: go install golang.org/x/tools/cmd/goimports@latest
+- go vet ./...
+- golangci-lint run   # install: https://golangci-lint.run/welcome/install/
+
+#### SHOULD
+- govulncheck ./...   # install: go install golang.org/x/vuln/cmd/govulncheck@latest
+- semgrep --config=p/golang --error .   # install: pip install semgrep
+
+#### MAY
+- jscpd internal/ cmd/   # install: npm install -g jscpd
+- dupl -t 50 ./...   # install: go install github.com/mibk/dupl@latest
+
+### testing 固有
+
+#### MUST
+- go test -race -cover -coverprofile=cover.out ./...
+- go tool cover -func=cover.out | awk '/total:/ {gsub("%",""); if($3+0<80) {print "coverage below 80%"; exit 1}}'
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- go test -bench=. -benchmem -run=^$ ./...   # ベンチがある場合のみ
+
 ## REVIEW_EXTRAS (スタック由来の追加レビュー観点)
 - 戻り値 error を全て受けているか (errcheck pass)
 - context が全層で第一引数として渡っているか

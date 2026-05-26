@@ -103,6 +103,61 @@ apps/
 - `apps/<app>/migrations/<番号>_<FID>_*.py` (DB スキーマ変更時)
 - `docs/02_detailed_design/<FID>/serializers.md` (主要 serializer の項目説明)
 
+## 自動チェック (MUST / SHOULD / MAY)
+
+auto-check スキルが本セクションを読み、各フェーズの直前に MUST/SHOULD/MAY を順次実行する。
+
+### 全フェーズ共通
+
+#### MUST
+- markdownlint-cli2 "**/*.md" "#node_modules"   # install: npm install -g markdownlint-cli2
+- bash ~/.claude/skills/auto-check/resources/scripts/check-mermaid.sh .   # install: npm install -g @mermaid-js/mermaid-cli
+
+#### SHOULD
+- textlint docs/**/*.md   # install: npm install -g textlint textlint-rule-preset-ja-technical-writing
+- typos --no-check-filenames .   # install: cargo install typos-cli
+
+#### MAY
+- lychee --no-progress "**/*.md"   # install: cargo install lychee
+
+### test-implementation 固有
+
+#### MUST
+- uv run pytest --collect-only -q
+- uv run pytest --tb=no -q   # 期待: 全テスト Red
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
+### implementation 固有
+
+#### MUST
+- uv run ruff check .
+- uv run ruff format --check .
+- uv run mypy .   # django-stubs / drf-stubs 適用済み前提
+- uv run python manage.py makemigrations --check --dry-run
+
+#### SHOULD
+- uv run pip-audit
+- semgrep --config=p/django --error .   # install: pip install semgrep
+
+#### MAY
+- jscpd apps/   # install: npm install -g jscpd
+
+### testing 固有
+
+#### MUST
+- uv run pytest --cov --cov-branch --cov-fail-under=80 -q
+
+#### SHOULD
+- (なし)
+
+#### MAY
+- (なし)
+
 ## REVIEW_EXTRAS (スタック由来の追加レビュー観点)
 - views / serializers にビジネスロジックを書いていないか (service 層に出ているか)
 - N+1 が発生していないか (django-debug-toolbar や django-silk で確認)

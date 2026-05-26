@@ -106,25 +106,33 @@ USDM 差分要求書を受け取った場合は、ファイルを Read で読み
 | 状況                                                                                                    | spawn するサブエージェント                                       |
 | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | `init` / `basic_design` 未完                                                                            | `basic-design`                                                   |
-| `basic_design.review` 未実行                                                                            | **`basic-design-review`** (プロジェクト全体)                     |
+| `basic_design` 完了、`auto_check` 未実行                                                                | **`auto-check`** (phase=basic-design, mode=per_feature, target=ALL) |
+| `basic_design.auto_check` MUST pass、`basic_design.review` 未実行                                       | **`basic-design-review`** (プロジェクト全体)                     |
 | 全機能のうち `detailed_design` 未完なものがある                                                         | `detailed-design` (機能ごとに並行 spawn)                         |
-| 全機能 `detailed_design` 完了、いずれかの機能の `review.per_feature` 未実行                             | **`detailed-design-review` (mode=per_feature)** 機能ごと並行     |
-| 全機能の `review.per_feature` pass、`review.cross` 未実行                                               | **`detailed-design-review` (mode=cross)** 1回                    |
+| 全機能 `detailed_design` 完了、いずれかの機能の `auto_check.per_feature` 未実行                         | **`auto-check`** (phase=detailed-design, mode=per_feature) 機能ごと並行 |
+| 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`detailed-design-review` (mode=per_feature)** 機能ごと並行     |
+| 全機能 `review.per_feature` pass、`auto_check.cross` 未実行 (横断ツールあり時)                          | **`auto-check`** (phase=detailed-design, mode=cross) 1回         |
+| 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`detailed-design-review` (mode=cross)** 1回                    |
 | 全機能のうち `test_design` 未完なものがある                                                             | `test-design` (機能ごとに並行 spawn)                             |
-| 全機能 `test_design` 完了、いずれかの機能の `review.per_feature` 未実行                                 | **`test-design-review` (mode=per_feature)** 機能ごと並行         |
-| 全機能の `review.per_feature` pass、`review.cross` 未実行                                               | **`test-design-review` (mode=cross)** 1回                        |
+| 全機能 `test_design` 完了、いずれかの機能の `auto_check.per_feature` 未実行                             | **`auto-check`** (phase=test-design, mode=per_feature) 機能ごと並行 |
+| 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`test-design-review` (mode=per_feature)** 機能ごと並行         |
+| 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`test-design-review` (mode=cross)** 1回 (必要なら直前に auto-check cross) |
 | 全機能のうち `test_implementation` 未完なものがある                                                     | `test-implementation` (機能ごとに並行 spawn)                     |
-| 全機能 `test_implementation` 完了、いずれかの機能の `review.per_feature` 未実行                         | **`test-implementation-review` (mode=per_feature)** 機能ごと並行 |
-| 全機能の `review.per_feature` pass、`review.cross` 未実行                                               | **`test-implementation-review` (mode=cross)** 1回                |
+| 全機能 `test_implementation` 完了、いずれかの機能の `auto_check.per_feature` 未実行                     | **`auto-check`** (phase=test-implementation, mode=per_feature) 機能ごと並行 |
+| 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`test-implementation-review` (mode=per_feature)** 機能ごと並行 |
+| 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`test-implementation-review` (mode=cross)** 1回 (必要なら直前に auto-check cross) |
 | 共通実装の特定タスクが pending                                                                          | `implementation` (擬似機能 `COMMON` を最初に処理)                |
 | 全機能のうち `implementation` 未完なものがある                                                          | `implementation` (機能ごとに並行 spawn)                          |
-| 全機能 `implementation` 完了、いずれかの機能の `review.per_feature` 未実行                              | **`implementation-review` (mode=per_feature)** 機能ごと並行      |
-| 全機能の `review.per_feature` pass、`review.cross` 未実行                                               | **`implementation-review` (mode=cross)** 1回                     |
+| 全機能 `implementation` 完了、いずれかの機能の `auto_check.per_feature` 未実行                          | **`auto-check`** (phase=implementation, mode=per_feature) 機能ごと並行 |
+| 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`implementation-review` (mode=per_feature)** 機能ごと並行      |
+| 全機能 `review.per_feature` pass、`auto_check.cross` 未実行 (jscpd 等あり時)                            | **`auto-check`** (phase=implementation, mode=cross) 1回          |
+| 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`implementation-review` (mode=cross)** 1回                     |
 | 全機能のうち `testing` 未完なものがある                                                                 | `testing` (機能ごとに並行 spawn)                                 |
-| 全機能 `testing` 完了、いずれかの機能の `review.per_feature` 未実行                                     | **`testing-review` (mode=per_feature)** 機能ごと並行             |
-| 全機能の `review.per_feature` pass、`review.cross` 未実行                                               | **`testing-review` (mode=cross)** 1回                            |
+| 全機能 `testing` 完了、いずれかの機能の `auto_check.per_feature` 未実行                                 | **`auto-check`** (phase=testing, mode=per_feature) 機能ごと並行  |
+| 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`testing-review` (mode=per_feature)** 機能ごと並行             |
+| 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`testing-review` (mode=cross)** 1回                            |
 | `testing-review (cross)` の判定で `open_bugs` が非空                                                    | `bug-fix` (バグごと)                                             |
-| `bug-fix` の各反復完了直後                                                                              | **`bug-fix-review`**                                             |
+| `bug-fix` の各反復完了直後                                                                              | **`bug-fix-review`** (auto-check は不要、bug-fix は対象範囲が小さく LLM 判定中心) |
 | 全機能・全バグが終了                                                                                    | (なし。最終レポート提示)                                         |
 
 **フェーズ進行の原則: フェーズバッチ**
@@ -320,10 +328,15 @@ Task(description="詳細設計 横断レビュー", subagent_type="general-purpo
 
 各フェーズ完了直後、対応するレビュースキルを **必ず自動 spawn** する。レビューが `pass` を返さない限り次フェーズには進まない。
 
-### レビュースキルの対応表 (2段ゲート)
+**3 段ゲート (auto-check → per_feature → cross):**
+LLM レビューの前段に、ツールによる **機械チェック (auto-check)** を必ず挟む。
+auto-check は `stack-config.md` で宣言された MUST/SHOULD/MAY ツール (linter / typecheck / markdownlint / mermaid-cli / カバレッジ等) を順次走らせ、MUST 失敗があればフェーズを差し戻す。MUST が通れば LLM レビュー (per_feature → cross) に進む。詳細は §「自動チェックゲート (auto-check)」を参照。
 
-詳細設計以降の各フェーズは **個別レビュー** → **横断レビュー** の 2 段。
+### レビュースキルの対応表 (auto-check を含む 3 段ゲート)
+
+詳細設計以降の各フェーズは **auto-check** → **個別レビュー (per_feature)** → **横断レビュー (cross)** の 3 段。
 ブリーフで `mode=per_feature` か `mode=cross` を渡し、同じ review スキルを 2 段階で使う。
+auto-check は per_feature の直前と、(cross スキャン系ツールがある場合は) cross の直前にも spawn する。
 
 | フェーズ              | レビュースキル                | 段1: 個別 (mode=per_feature)                              | 段2: 横断 (mode=cross)                               |
 | --------------------- | ----------------------------- | --------------------------------------------------------- | ---------------------------------------------------- |
@@ -335,16 +348,24 @@ Task(description="詳細設計 横断レビュー", subagent_type="general-purpo
 | `testing`             | `testing-review`              | 同上                                                      | 同上                                                 |
 | `bug_fix` (各反復)    | `bug-fix-review`              | (バグごと・1回。モード不要)                               | -                                                    |
 
-### 2 段ゲートの動作
+### 3 段ゲートの動作 (auto-check → per_feature → cross)
 
 ```mermaid
 flowchart TD
     Work[フェーズ X の作業 全機能 並行 spawn]
-    Work --> S1[Step 1 個別レビュー mode=per_feature N並行 spawn]
+    Work --> AC1[Step 0 auto-check mode=per_feature N並行 spawn ツールチェック]
+    AC1 --> AC1R{MUST 全 pass?}
+    AC1R -->|fail| FixAC[該当機能の作業を再 spawn auto-check 結果を briefing に]
+    FixAC --> Work
+    AC1R -->|pass| S1[Step 1 LLM レビュー mode=per_feature N並行 spawn]
     S1 --> S1R{全機能 pass?}
     S1R -->|fail 一部の機能| Fix1[該当機能の作業を再 spawn]
     Fix1 --> Work
-    S1R -->|all pass| S2[Step 2 横断レビュー mode=cross 1回 spawn 全機能対象]
+    S1R -->|all pass| AC2[Step 1.5 auto-check mode=cross 1回 spawn 横断ツール jscpd lychee 等]
+    AC2 --> AC2R{MUST 全 pass?}
+    AC2R -->|fail| FixAC2[横断 issue として再 spawn]
+    FixAC2 --> Work
+    AC2R -->|pass| S2[Step 2 LLM 横断レビュー mode=cross 1回 spawn]
     S2 --> S2R{pass?}
     S2R -->|fail 横断不整合| Fix2[該当機能の作業を再 spawn または COMMON を立てる]
     Fix2 --> Work
@@ -352,11 +373,16 @@ flowchart TD
 ```
 
 **ハンドリングの詳細:**
-1. フェーズ作業が完了したら、`<phase>-review (mode=per_feature)` を **機能数ぶん並行 spawn**
-2. 全機能の per_feature レビューが pass するまで待つ。fail があった機能は元のフェーズ作業を再 spawn
-3. 全機能 per_feature pass → `<phase>-review (mode=cross)` を **1回 spawn**
-4. cross レビューが pass → 次フェーズへ
-5. cross レビューが fail → 該当機能の作業を再 spawn、または `COMMON` 機能を立てる判断を `decisions.md` に記録
+1. フェーズ作業が完了したら、`auto-check (mode=per_feature)` を **機能数ぶん並行 spawn**
+2. auto-check の MUST に fail があれば → 該当機能の作業を再 spawn (auto-check レポートをブリーフに含める)
+3. 全機能の auto-check が MUST pass → `<phase>-review (mode=per_feature)` を **機能数ぶん並行 spawn**
+4. 全機能の per_feature レビューが pass するまで待つ。fail があれば元のフェーズ作業を再 spawn
+5. 全機能 per_feature pass → `auto-check (mode=cross)` を **1回 spawn** (jscpd / lychee 等の横断スキャン系ツールがある場合のみ。なければ skip)
+6. cross auto-check MUST pass → `<phase>-review (mode=cross)` を **1回 spawn**
+7. cross レビューが pass → 次フェーズへ
+8. cross レビューが fail → 該当機能の作業を再 spawn、または `COMMON` 機能を立てる判断を `decisions.md` に記録
+
+> auto-check の MUST がすべて pass でも SHOULD warning や MAY info があり得る。それらは LLM レビュー (per_feature / cross) のブリーフに渡し、LLM が判断 (accept なら `decisions.md` に記録)。
 
 ### 各レビュー spawn のブリーフ仕様
 
@@ -438,6 +464,67 @@ flowchart TD
 
 - レビューが fail だった場合、その判定を無視して次フェーズに進めることは禁止
 - ただしユーザが明示的に「このフェーズのレビューはスキップして進めて」と指示した場合のみ、`decisions.md` に「ユーザによるレビュースキップ承認」を記録した上で進めてよい
+
+## 自動チェックゲート (auto-check)
+
+LLM レビューの前段で走る **機械チェック**。`auto-check` という汎用スキルを各フェーズ用に呼び出して使う。
+
+### いつ呼ぶか
+
+- 各フェーズの per_feature レビューの **直前**: 機能数ぶん並行 spawn
+- 各フェーズの cross レビューの **直前**: cross スキャン系ツール (jscpd / lychee 等) が `stack-config.md` にあれば 1 回 spawn (なければ skip 可)
+
+### auto-check spawn のブリーフ
+
+```
+あなたは dev-workflow スキルセットのサブエージェントです。
+スキル: auto-check
+フェーズ: <phase>            ← basic-design | detailed-design | ...
+mode: <per_feature | cross>
+対象機能ID: <FID> または "ALL"
+プロジェクトルート: <PROJECT_ROOT>
+
+【作業手順】
+1. `~/.claude/skills/auto-check/SKILL.md` を Read し、指示に従う。
+2. `.dev-workflow/rules/stack/stack-config.md` (および project 層) から
+   「自動チェック (MUST / SHOULD / MAY)」セクションの本フェーズ向けコマンドを抽出。
+3. `resources/scripts/run-checks.sh` (Unix) または `run-checks.ps1` (Windows) を実行。
+4. 結果レポートを `docs/06_reviews/<FID>/<phase>-auto-check.md`
+   (cross の場合 `docs/06_reviews/cross/<phase>-auto-check.md`) に出力。
+5. 該当する status.json の `phases.<phase>.auto_check` を更新。
+
+【判定の意味】
+- MUST 全 pass (skipped 含む) → ゲート通過。次の LLM レビューへ
+- MUST に fail あり → ゲート停止。本フェーズを差し戻し
+- SHOULD warning / MAY info はレポートに記録するだけ。LLM レビューが見る
+
+【戻り値】
+- must_passed (bool)
+- should_warnings (count)
+- may_info (count)
+- skipped_missing_tools (list)
+- report_path (str)
+- verdict ("PASS" | "FAIL")
+```
+
+### auto-check 結果のハンドリング
+
+1. **PASS**: そのまま LLM レビュー (per_feature → cross) に進む。SHOULD warning と MAY info はレビューのブリーフに引き渡す
+2. **FAIL (MUST 失敗あり)**:
+   - 該当フェーズの作業を再 spawn (auto-check レポートを briefing に貼付)
+   - 修正完了後に auto-check と LLM レビューを順に再 spawn
+3. **未インストールツール (skipped_missing_tools 非空)**:
+   - レポートに残し、`open-questions.md` に「ローカル環境で <tool> 未インストール」を 1 件追記
+   - CI 側で必ず走ることをユーザに確認してもらう (ゲートは止めない)
+4. **3 回連続で同じ MUST fail**: ユーザにエスカレーション (環境問題 / プロジェクトルール側の問題の可能性)
+
+### auto-check スキップ条件
+
+以下の場合に限り auto-check を spawn しなくてよい:
+- プロジェクトに `.dev-workflow/rules/stack/stack-config.md` が **存在しない** (overlay 未使用の素の dev-workflow)
+- ユーザが明示的に `decisions.md` で「auto-check は CI 側に寄せる」と決めている
+
+それ以外では必ず spawn する。
 
 ## bug-fix からの設計差し戻し (Pause / Resume)
 
