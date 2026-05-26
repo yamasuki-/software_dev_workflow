@@ -118,12 +118,14 @@ USDM 差分要求書を受け取った場合は、ファイルを Read で読み
 | 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`test-design-review` (mode=per_feature)** 機能ごと並行         |
 | 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`test-design-review` (mode=cross)** 1回 (必要なら直前に auto-check cross) |
 | 全機能のうち `test_implementation` 未完なものがある                                                     | `test-implementation` (機能ごとに並行 spawn)                     |
-| 全機能 `test_implementation` 完了、いずれかの機能の `auto_check.per_feature` 未実行                     | **`auto-check`** (phase=test-implementation, mode=per_feature) 機能ごと並行 |
+| 全機能 `test_implementation` 完了、いずれかの機能の `test_run.red` 未実行                               | **`test-run`** (phase=test-implementation, mode=red) 機能ごと並行 |
+| 全機能の `test_run.red` PASS、いずれかの機能の `auto_check.per_feature` 未実行                          | **`auto-check`** (phase=test-implementation, mode=per_feature) 機能ごと並行 |
 | 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`test-implementation-review` (mode=per_feature)** 機能ごと並行 |
 | 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`test-implementation-review` (mode=cross)** 1回 (必要なら直前に auto-check cross) |
 | 共通実装の特定タスクが pending                                                                          | `implementation` (擬似機能 `COMMON` を最初に処理)                |
 | 全機能のうち `implementation` 未完なものがある                                                          | `implementation` (機能ごとに並行 spawn)                          |
-| 全機能 `implementation` 完了、いずれかの機能の `auto_check.per_feature` 未実行                          | **`auto-check`** (phase=implementation, mode=per_feature) 機能ごと並行 |
+| 全機能 `implementation` 完了、いずれかの機能の `test_run.green` 未実行                                  | **`test-run`** (phase=implementation, mode=green) 機能ごと並行   |
+| 全機能の `test_run.green` PASS、いずれかの機能の `auto_check.per_feature` 未実行                        | **`auto-check`** (phase=implementation, mode=per_feature) 機能ごと並行 |
 | 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`implementation-review` (mode=per_feature)** 機能ごと並行      |
 | 全機能 `review.per_feature` pass、`auto_check.cross` 未実行 (jscpd 等あり時)                            | **`auto-check`** (phase=implementation, mode=cross) 1回          |
 | 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`implementation-review` (mode=cross)** 1回                     |
@@ -464,6 +466,79 @@ flowchart TD
 
 - レビューが fail だった場合、その判定を無視して次フェーズに進めることは禁止
 - ただしユーザが明示的に「このフェーズのレビューはスキップして進めて」と指示した場合のみ、`decisions.md` に「ユーザによるレビュースキップ承認」を記録した上で進めてよい
+
+## テスト実行ゲート (test-run)
+
+実装系フェーズ (test-implementation / implementation) 完了直後、**LLM レビューと auto-check の前** に `test-run` スキルを spawn してテストを実行する。テスト実行をレビュースキルから完全に分離するための単一責務スキル。
+
+### いつ呼ぶか
+
+| フェーズ完了 | spawn する test-run | 期待 verdict |
+|---|---|---|
+| `test-implementation` 完了 | `test-run` (mode=red) を機能数ぶん並行 | 全テスト Fail (Red) であること |
+| `implementation` 完了 | `test-run` (mode=green) を機能数ぶん並行 | 全テスト Pass (Green) であること |
+
+### test-run spawn のブリーフ
+
+```
+あなたは dev-workflow スキルセットのサブエージェントです。
+スキル: test-run
+フェーズ: test-implementation | implementation
+mode: red | green
+対象機能ID: <FID>
+プロジェクトルート: <PROJECT_ROOT>
+
+【作業手順】
+1. `~/.claude/skills/test-run/SKILL.md` を Read し、指示に従う。
+2. `.dev-workflow/rules/stack/stack-config.md` の「テスト実行コマンド」セクションから
+   unit / integration / e2e のコマンドを抽出 (<FID> を実 ID に置換)。
+3. `resources/scripts/run-tests.sh` (Unix) または `run-tests.ps1` (Windows) を実行。
+4. 結果レポートを `docs/04_test_results/<FID>/<phase>-<mode>-confirmation.md` に保存。
+5. raw log を `docs/04_test_results/<FID>/<phase>-<mode>-run.log` に保存。
+6. status.json の `phases.<phase>.test_run` を更新。
+
+【判定の意味】
+- mode=red で全 Fail かつ pass=0 → verdict=PASS (Red 確認 OK、次に進む)
+- mode=red で 1 件でも pass → verdict=FAIL (test-implementation に差し戻し)
+- mode=green で全 Pass かつ fail=0 → verdict=PASS (Green 確認 OK、次に進む)
+- mode=green で 1 件でも fail → verdict=FAIL (implementation に差し戻し)
+
+【戻り値】
+- verdict (PASS | FAIL)
+- executed, passed, failed, skipped, xfail (count)
+- expected_state (red | green)
+- report_path (str)
+- log_path (str)
+```
+
+### test-run 結果のハンドリング
+
+1. **PASS**: そのまま **auto-check (per_feature)** に進む。LLM レビュー (per_feature) はその後
+2. **FAIL**:
+   - mode=red FAIL → `test-implementation` を再 spawn (failing でないテストを Red にする修正)
+   - mode=green FAIL → `implementation` を再 spawn (failing テストを Pass させる修正)
+   - 戻り値のレポートをブリーフに貼付
+3. **3 回連続で同じ FAIL**: ユーザにエスカレーション (設計レベルの欠陥の可能性)
+
+### test-run が走らないケース
+
+以下の場合のみ test-run を spawn しなくてよい:
+- プロジェクトに `.dev-workflow/rules/stack/stack-config.md` が **存在しない**
+- `stack-config.md` の「テスト実行コマンド」セクションが空 (テスト未整備プロジェクト)
+- ユーザが `decisions.md` で「test-run スキップ」を明示承認している
+
+それ以外では必ず spawn する。
+
+### test-run と auto-check の関係
+
+両者は **別目的**:
+
+| スキル | 目的 | 走るテスト |
+|---|---|---|
+| **test-run** | 全テストの **状態確認** (Red / Green) | 対象 FID の全層 (unit / integration / e2e) を実行し、ステータスを確認 |
+| **auto-check** | **構文・型・スタイル・カバレッジ** の機械チェック | stack-config.md の自動チェックセクションで宣言されたコマンド (テスト実行を含むこともあるが、目的はカバレッジ閾値等) |
+
+実装系フェーズでは順序が決まっている: **test-run → auto-check → LLM レビュー (per_feature → cross)**。
 
 ## 自動チェックゲート (auto-check)
 

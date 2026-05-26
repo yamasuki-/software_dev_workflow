@@ -68,35 +68,47 @@ flowchart TD
 - 個別レビューは「per-feature 内の整合」を、横断レビューは「機能間の一貫性と共通化機会」をそれぞれ集中して検証
 - 改修・新機能追加で1機能だけ進める場合も同じフロー (バッチ対象が1機能になるだけで、cross も自動的に縮退)
 
-## 3 段ゲートの動作 (auto-check → per_feature → cross)
+## ゲートの動作 (test-run → auto-check → per_feature → cross)
 
-各フェーズ完了直後、LLM レビューの前段に必ず **auto-check** が走る。
+各フェーズ完了直後、LLM レビューの前段で **test-run (実装系のみ) → auto-check → per_feature → cross** の順に走る。test-run は実装系フェーズ (test-implementation / implementation) でのみ spawn される。
 
 ```mermaid
 flowchart TD
     Phase[フェーズ作業 全機能 並行 spawn]
-    Phase --> AC1[auto-check mode=per_feature N並行 spawn]
+    Phase --> TR{実装系フェーズ?}
+    TR -->|test-implementation| TR1[test-run mode=red N並行]
+    TR -->|implementation| TR2[test-run mode=green N並行]
+    TR -->|それ以外| AC1[auto-check mode=per_feature N並行]
+    TR1 --> TR1R{verdict=PASS?}
+    TR1R -->|FAIL| BackTR1[test-implementation を再 spawn]
+    BackTR1 --> Phase
+    TR1R -->|PASS| AC1
+    TR2 --> TR2R{verdict=PASS?}
+    TR2R -->|FAIL| BackTR2[implementation を再 spawn]
+    BackTR2 --> Phase
+    TR2R -->|PASS| AC1
     AC1 --> AC1R{MUST 全 pass?}
-    AC1R -->|fail| BackAC[該当機能の作業を再 spawn auto-check レポートを briefing に]
+    AC1R -->|fail| BackAC[該当機能を再 spawn]
     BackAC --> Phase
-    AC1R -->|pass| R1[LLM レビュー mode=per_feature N並行 spawn]
+    AC1R -->|pass| R1[LLM レビュー mode=per_feature N並行]
     R1 --> R1R{全機能 pass?}
     R1R -->|fail| Back1[該当機能の作業を再 spawn]
     Back1 --> Phase
-    R1R -->|pass| AC2[auto-check mode=cross 1回 spawn 横断ツール]
+    R1R -->|pass| AC2[auto-check mode=cross 1回 横断ツール]
     AC2 --> AC2R{MUST 全 pass?}
     AC2R -->|fail| Back2[横断 issue として再 spawn]
     Back2 --> Phase
-    AC2R -->|pass| R2[LLM 横断レビュー mode=cross 1回 spawn]
+    AC2R -->|pass| R2[LLM 横断レビュー mode=cross 1回]
     R2 --> R2R{pass?}
     R2R -->|fail| Back3[該当機能再 spawn または COMMON 立てる]
     Back3 --> Phase
     R2R -->|pass| Next[次フェーズへ]
 ```
 
-- **auto-check 自体は新規スキル** (`~/.claude/skills/auto-check/`) として配置
-- 走るツールは `<PROJECT_ROOT>/.dev-workflow/rules/stack/stack-config.md` の「自動チェック (MUST / SHOULD / MAY)」セクションで宣言 (stack-presets が提供するスタックごとのプリセットを使うのが標準)
-- 未インストールツールは **skip + warn** で扱われ、ゲートは止まらない (本来 fail すべきだったケースは CI 側で検出する前提)
+- **test-run** は単一責務スキル: 対象機能のテストを走らせ Red/Green 状態だけを確認。`docs/04_test_results/<FID>/<phase>-<mode>-confirmation.md` に出力
+- これにより `test-implementation-review` / `implementation-review` は **自分でテスト実行しなくてよい** (test-run の結果を Read するだけ)
+- **auto-check** はテスト実行 *以外* の機械チェック (lint / typecheck / カバレッジ等) を担当
+- **未インストールツール / コマンド未定義** は skip + warn (ローカル開発は止まらない、CI 側で担保)
 - 横断スキャン系ツール (jscpd / lychee 等) がない場合、cross モードの auto-check は skip 可
 
 ## TDD の規律

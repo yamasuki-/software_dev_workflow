@@ -33,6 +33,7 @@
 | `testing-review`                | 全テスト完了確認 (未実施/実施不可で終わっていないか)  |
 | `bug-fix`                       | 不具合修正 (原因調査→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ。設計変更が必要な場合は **設計フェーズに差し戻し** て再走させる。bug-fix 自身は設計を直接編集しない) |
 | `bug-fix-review`                | 反復ごとに 5ステップの規律違反を検証                  |
+| `test-run`                      | テスト実行ゲート。test-implementation 完了直後に **mode=red** (全 Fail 期待) で、implementation 完了直後に **mode=green** (全 Pass 期待) で spawn される単一責務スキル。結果を `docs/04_test_results/<FID>/<phase>-<mode>-confirmation.md` に出力。これにより `*-review` スキルはテスト実行を担わず、結果ファイルを Read するだけで済む |
 | `auto-check`                    | 機械チェックゲート。各 LLM レビューの直前に走り、`stack-config.md` 由来の MUST/SHOULD/MAY ツール (linter / typecheck / markdownlint / mermaid-cli / カバレッジ等) を順次実行する。MUST 失敗があればフェーズ差し戻し。未インストールツールは skip + warn 扱い |
 
 通常は `dev-workflow` を起動する。`dev-workflow` が状況を判断して各フェーズスキルを **別エージェントとして spawn** する。
@@ -68,6 +69,11 @@ $REPO_ROOT/
    │  ├─ SKILL.md
    │  └─ resources/                            # 各スキルに必要なテンプレートは自身の resources/ に同梱
    │     └─ progress/{project.json, open-questions.md, decisions.md}
+   ├─ test-run/                                # テスト実行ゲート (test-implementation 後 = red / implementation 後 = green)
+   │  ├─ SKILL.md
+   │  └─ resources/
+   │     ├─ scripts/                           # run-tests.sh / .ps1 / parse-results.py
+   │     └─ report-template.md
    ├─ auto-check/                              # 機械チェックゲート (各 LLM レビューの前段で走る)
    │  ├─ SKILL.md
    │  └─ resources/
