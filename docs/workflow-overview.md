@@ -1,23 +1,29 @@
 # ワークフロー全体像
 
-## エージェント構成
+## エージェント構成 (Skill 2 個 + Agent 16 個)
+
+ユーザは Skill `dev-workflow` (または `dev-workflow-overlay`) を起動する。Skill が「メイン Claude」として動き、各フェーズの作業を Agent (`~/.claude/agents/<name>/<name>.md`) に `Task(subagent_type="<name>")` で委譲する。
 
 ```mermaid
 flowchart TD
-    User["ユーザ"] <--> Orch["dev-workflow<br/>オーケストレータ"]
-    Orch -. "Task ツールで spawn" .-> BDA["basic-design"]
-    Orch -. spawn .-> DDA["detailed-design"]
-    Orch -. spawn .-> TDA["test-design"]
-    Orch -. spawn .-> TIA["test-implementation<br/>TDD Red"]
-    Orch -. spawn .-> ImpA["implementation<br/>TDD Green"]
-    Orch -. spawn .-> TstA["testing"]
-    Orch -. spawn .-> BugA["bug-fix"]
-    BDA & DDA & TDA & TIA & ImpA & TstA & BugA <-->|"read/write"| FS[(".dev-workflow/<br/>docs/<br/>src/<br/>tests/")]
+    User["ユーザ"] <--> Orch["dev-workflow Skill<br/>(オーケストレータ)"]
+    Orch -. "Task(subagent_type=...)" .-> BDA["basic-design Agent"]
+    Orch -. spawn .-> DDA["detailed-design Agent"]
+    Orch -. spawn .-> TDA["test-design Agent"]
+    Orch -. spawn .-> TIA["test-implementation Agent<br/>TDD Red"]
+    Orch -. spawn .-> TR["test-run Agent<br/>red/green 確認"]
+    Orch -. spawn .-> AC["auto-check Agent<br/>機械チェック"]
+    Orch -. spawn .-> ImpA["implementation Agent<br/>TDD Green"]
+    Orch -. spawn .-> TstA["testing Agent"]
+    Orch -. spawn .-> BugA["bug-fix Agent"]
+    Orch -. spawn .-> RevA["*-review Agents (7)"]
+    BDA & DDA & TDA & TIA & TR & AC & ImpA & TstA & BugA & RevA <-->|"read/write"| FS[(".dev-workflow/<br/>docs/<br/>src/<br/>tests/")]
     Orch <-. read .-> FS
 ```
 
-- オーケストレータはユーザとの長期対話を担当。設計ドキュメントやコードは原則書かない。
-- 各サブエージェントは **フレッシュコンテキスト** で起動し、必要情報をブリーフとファイルから取得して作業する。
+- **Skill** (`~/.claude/skills/dev-workflow/`, `~/.claude/skills/dev-workflow-overlay/`) はメイン Claude にロードされ、ユーザと長期対話する。設計ドキュメントやコードは原則書かない。
+- **Agent** (`~/.claude/agents/<name>/<name>.md`) は **フレッシュコンテキスト** で起動し、frontmatter (`tools`, `model`) と body (system prompt) に従って単一タスクを遂行。
+- ブリーフは「今回のスコープ + 既知の前提」だけを渡す (手順は Agent の system prompt に組み込み済み)。
 - 状態の引き継ぎはすべて `.dev-workflow/` ファイル経由。
 
 ## 全体フロー

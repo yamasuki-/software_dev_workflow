@@ -13,31 +13,41 @@
 - **推測しない**: 不明点はユーザに確認する。重要度が高ければ即時、軽微なものはフェーズ末でまとめて (ハイブリッド方針)。
 - **Mermaid を用いた図表**: 状態遷移、ER図、シーケンス図は Mermaid で記述。
 
-## スキル構成
+## 構成 (Skill 2 個 + Agent 16 個)
 
-| スキル                          | 役割                                                  |
-| ------------------------------- | ----------------------------------------------------- |
-| `dev-workflow`                  | オーケストレータ。プロジェクト全体の進行を統括        |
-| `dev-workflow-overlay`          | `dev-workflow` のラッパー。プロジェクト直下 `.dev-workflow/rules/` のプロジェクト固有ルール (必須) と `extra-phases.md` の追加フェーズを反映してベースを実行する。スキル本体の完全上書きも `.claude/skills/` で可能 (Advanced) |
-| `basic-design`                  | 基本設計 (システム全体方針 + 機能IDの確定)             |
-| `basic-design-review`           | 基本設計 ↔ 要件 の整合確認                            |
-| `detailed-design`               | 詳細設計 (機能ごとに UI/機能/状態/DB/シーケンスの5種)  |
-| `detailed-design-review`        | 詳細設計 ↔ 基本設計 の整合確認                        |
-| `test-design`                   | テスト設計ドキュメント作成 (単体/結合/E2E の3層・ケース一覧) |
-| `test-design-review`            | テスト設計 ↔ 詳細設計 の網羅性確認                    |
-| `test-implementation`           | テストコード作成 (実行可能な失敗テスト = TDD Red)      |
-| `test-implementation-review`    | テストコード ↔ テスト設計 と Red 確認の検証           |
-| `implementation`                | プロダクトコード作成 (失敗テストを Pass = TDD Green)    |
-| `implementation-review`         | プロダクトコード ↔ 詳細設計 + Green 確認、勝手な変更の禁止 |
-| `testing`                       | テスト実行 (包括的に再走し結果を記録、Fail は不具合票へ) |
-| `testing-review`                | 全テスト完了確認 (未実施/実施不可で終わっていないか)  |
-| `bug-fix`                       | 不具合修正 (原因調査→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ。設計変更が必要な場合は **設計フェーズに差し戻し** て再走させる。bug-fix 自身は設計を直接編集しない) |
-| `bug-fix-review`                | 反復ごとに 5ステップの規律違反を検証                  |
-| `test-run`                      | テスト実行ゲート。test-implementation 完了直後に **mode=red** (全 Fail 期待) で、implementation 完了直後に **mode=green** (全 Pass 期待) で spawn される単一責務スキル。結果を `docs/04_test_results/<FID>/<phase>-<mode>-confirmation.md` に出力。これにより `*-review` スキルはテスト実行を担わず、結果ファイルを Read するだけで済む |
-| `auto-check`                    | 機械チェックゲート。各 LLM レビューの直前に走り、`stack-config.md` 由来の MUST/SHOULD/MAY ツール (linter / typecheck / markdownlint / mermaid-cli / カバレッジ等) を順次実行する。MUST 失敗があればフェーズ差し戻し。未インストールツールは skip + warn 扱い |
+`dev-workflow` / `dev-workflow-overlay` は **ユーザが呼ぶ Skill** (`~/.claude/skills/`)。
+残り 16 個は **サブエージェント** として `Task(subagent_type="<name>")` で spawn される Agent (`~/.claude/agents/<name>/<name>.md`)。
 
-通常は `dev-workflow` を起動する。`dev-workflow` が状況を判断して各フェーズスキルを **別エージェントとして spawn** する。
-直接フェーズスキルを起動することもできる (例: 既存プロジェクトの途中から `implementation` だけ使いたい場合)。
+### Skill (2 個)
+
+| Skill                          | 役割                                                  |
+| ------------------------------ | ----------------------------------------------------- |
+| `dev-workflow`                 | オーケストレータ。プロジェクト全体の進行を統括 (ユーザとの長期対話、進捗判断、Agent spawn) |
+| `dev-workflow-overlay`         | `dev-workflow` のラッパー。プロジェクト直下 `.dev-workflow/rules/` のプロジェクト固有ルール (必須) と `extra-phases.md` の追加フェーズを反映してベースを実行する。Agent 本体の完全上書きも `<PROJECT_ROOT>/.claude/agents/<name>.md` で可能 (Advanced) |
+
+### Agent (16 個)
+
+| Agent                          | 役割                                                  |
+| ------------------------------ | ----------------------------------------------------- |
+| `basic-design`                 | 基本設計 (システム全体方針 + 機能IDの確定)             |
+| `basic-design-review`          | 基本設計 ↔ 要件 の整合確認                            |
+| `detailed-design`              | 詳細設計 (機能ごとに UI/機能/状態/DB/シーケンスの5種)  |
+| `detailed-design-review`       | 詳細設計 ↔ 基本設計 の整合確認                        |
+| `test-design`                  | テスト設計ドキュメント作成 (単体/結合/E2E の3層・ケース一覧) |
+| `test-design-review`           | テスト設計 ↔ 詳細設計 の網羅性確認                    |
+| `test-implementation`          | テストコード作成 (実行可能な失敗テスト = TDD Red)      |
+| `test-implementation-review`   | テストコード ↔ テスト設計 と Red 確認の検証           |
+| `implementation`               | プロダクトコード作成 (失敗テストを Pass = TDD Green)    |
+| `implementation-review`        | プロダクトコード ↔ 詳細設計 + Green 確認、勝手な変更の禁止 |
+| `testing`                      | テスト実行 (包括的に再走し結果を記録、Fail は不具合票へ) |
+| `testing-review`               | 全テスト完了確認 (未実施/実施不可で終わっていないか)  |
+| `bug-fix`                      | 不具合修正 (原因調査→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ) |
+| `bug-fix-review`               | 反復ごとに 5ステップの規律違反を検証                  |
+| `test-run`                     | テスト実行ゲート (mode=red / green)。結果を `docs/04_test_results/<FID>/<phase>-<mode>-confirmation.md` に出力。`*-review` Agent はこれを読むだけ |
+| `auto-check`                   | 機械チェックゲート。`stack-config.md` 由来の MUST/SHOULD/MAY ツール (linter / typecheck / markdownlint / カバレッジ等) を実行。MUST 失敗でフェーズ差し戻し |
+
+通常は `dev-workflow` (Skill) を起動する。`dev-workflow` が状況を判断して上記 16 個の Agent を **`Task(subagent_type="<name>")` で spawn** する。
+ユーザが特定の Agent を直接呼びたい場合 (例: 既存プロジェクトの途中から `implementation` だけ使いたい) は、Claude に「implementation Agent を spawn して」と頼めば `Task(subagent_type="implementation")` が呼ばれる。
 
 ### 動作モデル
 
@@ -64,45 +74,57 @@ $REPO_ROOT/
 ├─ README.md
 ├─ docs/                                       # ワークフロー全体ドキュメント
 │  └─ workflow-overview.md
-└─ skills/                                     # スキル本体 (これを Claude Code のスキルディレクトリにインストール)
-   ├─ dev-workflow/
-   │  ├─ SKILL.md
-   │  └─ resources/                            # 各スキルに必要なテンプレートは自身の resources/ に同梱
-   │     └─ progress/{project.json, open-questions.md, decisions.md}
-   ├─ test-run/                                # テスト実行ゲート (test-implementation 後 = red / implementation 後 = green)
-   │  ├─ SKILL.md
-   │  └─ resources/
-   │     ├─ scripts/                           # run-tests.sh / .ps1 / parse-results.py
-   │     └─ report-template.md
-   ├─ auto-check/                              # 機械チェックゲート (各 LLM レビューの前段で走る)
-   │  ├─ SKILL.md
-   │  └─ resources/
-   │     ├─ scripts/                           # check-tools / run-checks / parse-stack-config / check-mermaid
-   │     └─ report-template.md
-   ├─ dev-workflow-overlay/
-   │  ├─ SKILL.md
-   │  └─ resources/
-   │     ├─ project-rules/                     # プロジェクトカスタマイズ用テンプレ群 (project 層 + 汎用 stack 雛形)
-   │     └─ stack-presets/                     # 言語/FW 別の stack 層プリセット集 (8 種類)
-   │        ├─ python-fastapi/    (7 files)
-   │        ├─ python-django/     (7 files)
-   │        ├─ go-stdlib-chi/     (7 files)
-   │        ├─ typescript-nextjs/ (7 files)
-   │        ├─ typescript-react-vite/ (7 files)
-   │        ├─ react-native/      (7 files)
-   │        ├─ java-spring-boot/  (7 files)
-   │        ├─ ruby-rails/        (7 files)
-   │        └─ README.md
-   ├─ basic-design/        (+ resources/)
-   ├─ basic-design-review/ (+ resources/)
-   ├─ detailed-design/     (+ resources/)
-   ├─ ... (各フェーズ・各レビュースキル, 計 16 スキル) ...
-   └─ bug-fix-review/      (+ resources/)
+├─ skills/                                     # Skill (ユーザ起動の入口)。~/.claude/skills/ にインストール
+│  ├─ dev-workflow/
+│  │  ├─ SKILL.md
+│  │  └─ resources/
+│  │     └─ progress/{project.json, open-questions.md, decisions.md}
+│  └─ dev-workflow-overlay/
+│     ├─ SKILL.md
+│     └─ resources/
+│        ├─ project-rules/                     # プロジェクトカスタマイズ用テンプレ群 (project 層 + 汎用 stack 雛形)
+│        └─ stack-presets/                     # 言語/FW 別の stack 層プリセット集 (8 種類)
+│           ├─ python-fastapi/    (7 files)
+│           ├─ python-django/     (7 files)
+│           ├─ go-stdlib-chi/     (7 files)
+│           ├─ typescript-nextjs/ (7 files)
+│           ├─ typescript-react-vite/ (7 files)
+│           ├─ react-native/      (7 files)
+│           ├─ java-spring-boot/  (7 files)
+│           ├─ ruby-rails/        (7 files)
+│           └─ README.md
+└─ agents/                                     # Agent (Skill から spawn される)。~/.claude/agents/ にインストール
+   ├─ basic-design/
+   │  ├─ basic-design.md                       # frontmatter (name/description/tools/model) + system prompt
+   │  └─ resources/                            # 旧 skills/basic-design/resources/ 由来
+   ├─ basic-design-review/{basic-design-review.md, resources/}
+   ├─ detailed-design/{detailed-design.md, resources/}
+   ├─ detailed-design-review/{detailed-design-review.md, resources/}
+   ├─ test-design/{test-design.md, resources/}
+   ├─ test-design-review/{test-design-review.md, resources/}
+   ├─ test-implementation/{test-implementation.md, resources/}    # resources 任意
+   ├─ test-implementation-review/{...}
+   ├─ implementation/{...}
+   ├─ implementation-review/{...}
+   ├─ testing/{...}
+   ├─ testing-review/{...}
+   ├─ bug-fix/{...}
+   ├─ bug-fix-review/{...}
+   ├─ test-run/{test-run.md, resources/{scripts/, report-template.md}}
+   └─ auto-check/{auto-check.md, resources/{scripts/, report-template.md}}
 ```
 
-**各スキルは自己完結**: SKILL.md と必要なテンプレートが同じディレクトリにまとまっており、`cp -R skills/* ~/.claude/skills/` のような単純コピーでインストール先がどこでも動作する。
+**インストール先 (ユーザグローバル):**
+```bash
+cp -R skills/*  ~/.claude/skills/
+cp -R agents/*  ~/.claude/agents/
+```
 
-> 旧バージョンとの互換性メモ: 以前はリポジトリ直下に `templates/` が存在したが、現在は各スキル配下の `resources/` に再配置済み。古い `templates/` ディレクトリが残っている場合は手動で削除して問題ない。
+**Skill と Agent の役割:**
+- `skills/` の中身はユーザが呼ぶ「ワークフローの入口」 (Skill カタログに自動 load される)
+- `agents/` の中身は `Task(subagent_type="<name>")` で spawn される「単一責務のサブエージェント」 (Agent カタログに自動 load される)
+
+> 旧バージョンとの互換性メモ: 旧構成では 18 個すべてが `skills/` 配下にあったが、Skill (2) と Agent (16) に分離した。古い `skills/<phase>/` 等が残っている場合は手動で削除して `~/.claude/agents/` 側に揃えること。
 
 ## 新規プロジェクトでの使い方
 
@@ -122,10 +144,13 @@ PowerShell 例 (Windows):
 # このリポジトリのクローン先 (環境に合わせて書き換え)
 $RepoRoot = "$env:USERPROFILE\github\claudecode_settings"
 
-# ベース全部をユーザグローバルに設置
+# Skill (2 個) と Agent (16 個) をユーザグローバルに設置
 $ClaudeSkills = "$env:USERPROFILE\.claude\skills"
+$ClaudeAgents = "$env:USERPROFILE\.claude\agents"
 New-Item -ItemType Directory -Force -Path $ClaudeSkills | Out-Null
+New-Item -ItemType Directory -Force -Path $ClaudeAgents | Out-Null
 Copy-Item -Recurse "$RepoRoot\skills\*" $ClaudeSkills
+Copy-Item -Recurse "$RepoRoot\agents\*" $ClaudeAgents
 ```
 
 bash / macOS / Linux 例:
@@ -134,9 +159,10 @@ bash / macOS / Linux 例:
 # このリポジトリのクローン先 (環境に合わせて書き換え)
 REPO_ROOT="$HOME/dev/claudecode_settings"
 
-# ベース全部をユーザグローバルに設置
-mkdir -p ~/.claude/skills
+# Skill (2 個) と Agent (16 個) をユーザグローバルに設置
+mkdir -p ~/.claude/skills ~/.claude/agents
 cp -R "$REPO_ROOT/skills/"* ~/.claude/skills/
+cp -R "$REPO_ROOT/agents/"* ~/.claude/agents/
 ```
 
 設置後、Claude Code を起動して以下のいずれかで起動する:
@@ -919,12 +945,12 @@ flowchart TD
 
 > **通常は使わない**。スキル本体ごと丸ごと書き換えたい場合のみ。
 
-ルールの追加/上書きでは表現できない大きな変更 (例: フェーズの内部手順を全く別物にする) が必要な場合だけ、Claude Code のスキル探索順を利用してプロジェクト直下に同名スキルを置く:
+ルールの追加/上書きでは表現できない大きな変更 (例: フェーズの内部手順を全く別物にする) が必要な場合だけ、Claude Code の Agent 探索順を利用してプロジェクト直下に同名 Agent を置く:
 
-- `<project>/.claude/skills/test-design/SKILL.md` を作れば、テスト設計フェーズは丸ごとそのスキルになる。
-- ベースは触らない。
+- `<project>/.claude/agents/test-design.md` または `<project>/.claude/agents/test-design/test-design.md` を作れば、テスト設計フェーズは丸ごとそのプロジェクトローカル Agent になる (Claude Code は project 配下を優先)。
+- ベース (`~/.claude/agents/test-design/`) は触らない。
 
-この機能を使うと「スキル本体まで読み解かないと挙動が分からない」状態になり保守性が落ちるため、可能な限り層B のルールファイルで対応すること。
+この機能を使うと「Agent 本体まで読み解かないと挙動が分からない」状態になり保守性が落ちるため、可能な限り層B のルールファイルで対応すること。
 
 ### 追加フェーズ — `<project>/.dev-workflow/rules/extra-phases.md`
 
@@ -1075,7 +1101,7 @@ LLM レビューの直前で auto-check が走り、結果は `docs/06_reviews/<
 bash:
 
 ```bash
-bash ~/.claude/skills/auto-check/resources/scripts/run-checks.sh \
+bash ~/.claude/agents/auto-check/resources/scripts/run-checks.sh \
   --project-root "$HOME/projects/my-app" \
   --phase implementation \
   --mode per_feature \
@@ -1085,7 +1111,7 @@ bash ~/.claude/skills/auto-check/resources/scripts/run-checks.sh \
 PowerShell:
 
 ```powershell
-pwsh "$env:USERPROFILE\.claude\skills\auto-check\resources\scripts\run-checks.ps1" `
+pwsh "$env:USERPROFILE\.claude\agents\auto-check\resources\scripts\run-checks.ps1" `
   -ProjectRoot "$env:USERPROFILE\projects\my-app" `
   -Phase implementation `
   -Mode per_feature `
@@ -1102,7 +1128,7 @@ exit code:
 事前にどのツールが入っていないか確認したい場合:
 
 ```bash
-bash ~/.claude/skills/auto-check/resources/scripts/check-tools.sh \
+bash ~/.claude/agents/auto-check/resources/scripts/check-tools.sh \
   markdownlint-cli2 mmdc textlint typos lychee jscpd semgrep
 ```
 
