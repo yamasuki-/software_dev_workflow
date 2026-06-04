@@ -108,12 +108,14 @@ USDM 差分要求書を受け取った場合は、ファイルを Read で読み
 | `init` / `basic_design` 未完                                                                            | `basic-design`                                                   |
 | `basic_design` 完了、`auto_check` 未実行                                                                | **`auto-check`** (phase=basic-design, mode=per_feature, target=ALL) |
 | `basic_design.auto_check` MUST pass、`basic_design.review` 未実行                                       | **`basic-design-review`** (プロジェクト全体)                     |
-| 全機能のうち `detailed_design` 未完なものがある                                                         | `detailed-design` (機能ごとに並行 spawn)                         |
+| `basic_design.review` pass、`checkpoints.basic_design` 未承認 (= status が `pending`)                   | **🛑 human-checkpoint (basic-design)**: ユーザに完了サマリを提示し承認を待つ |
+| 全機能のうち `detailed_design` 未完なものがある (`checkpoints.basic_design = approved` または `skipped` 後) | `detailed-design` (機能ごとに並行 spawn)                         |
 | 全機能 `detailed_design` 完了、いずれかの機能の `auto_check.per_feature` 未実行                         | **`auto-check`** (phase=detailed-design, mode=per_feature) 機能ごと並行 |
 | 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`detailed-design-review` (mode=per_feature)** 機能ごと並行     |
 | 全機能 `review.per_feature` pass、`auto_check.cross` 未実行 (横断ツールあり時)                          | **`auto-check`** (phase=detailed-design, mode=cross) 1回         |
 | 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`detailed-design-review` (mode=cross)** 1回                    |
-| 全機能のうち `test_design` 未完なものがある                                                             | `test-design` (機能ごとに並行 spawn)                             |
+| `detailed_design` cross review pass、`checkpoints.detailed_design` 未承認                              | **🛑 human-checkpoint (detailed-design)**: ユーザに完了サマリを提示し承認を待つ |
+| 全機能のうち `test_design` 未完なものがある (`checkpoints.detailed_design = approved` または `skipped` 後) | `test-design` (機能ごとに並行 spawn)                             |
 | 全機能 `test_design` 完了、いずれかの機能の `auto_check.per_feature` 未実行                             | **`auto-check`** (phase=test-design, mode=per_feature) 機能ごと並行 |
 | 全機能の `auto_check.per_feature` MUST pass、いずれかの `review.per_feature` 未実行                     | **`test-design-review` (mode=per_feature)** 機能ごと並行         |
 | 全機能 `review.per_feature` pass、`review.cross` 未実行                                                 | **`test-design-review` (mode=cross)** 1回 (必要なら直前に auto-check cross) |
@@ -438,6 +440,85 @@ flowchart TD
 
 - レビューが fail だった場合、その判定を無視して次フェーズに進めることは禁止
 - ただしユーザが明示的に「このフェーズのレビューはスキップして進めて」と指示した場合のみ、`decisions.md` に「ユーザによるレビュースキップ承認」を記録した上で進めてよい
+
+## 人間チェックポイント (human-checkpoint)
+
+**設計の最重要マイルストーン** では、ツール・LLM レビューがすべて pass しても **dev-workflow は次フェーズに進まず、ユーザに明示承認を求めて停止する**。
+
+### いつ発生するか
+
+| タイミング | 対象 |
+|---|---|
+| `basic-design` の cross review が pass した直後 | プロジェクト全体 (機能 ID / アーキ / NFR の確定) |
+| `detailed-design` の cross review が pass した直後 | プロジェクト全体 (全 FID の詳細設計の確定) |
+
+その他のフェーズ (test-design 以降) はチェックポイントなし。設計が承認された時点で人間の意思が反映済みと見なす。
+
+### 動作
+
+1. オーケストレータ (`dev-workflow` Skill 本体) が「cross review pass」を検出
+2. **完了サマリを生成** してユーザに提示:
+   - 作成 / 更新された成果物のパス一覧
+   - 機能 ID (basic-design 時) / 主要決定事項
+   - レビュー指摘の解決状況
+   - `open-questions.md` の残件
+3. **ユーザの応答を待つ** (ここで Skill のターンが終わる)
+4. ユーザ応答を受けて分岐:
+
+| ユーザ応答 | オーケストレータの動作 |
+|---|---|
+| `approve` / 「承認」 / 「OK」など肯定 | `decisions.md` に「YYYY-MM-DDTHH:MM:SSZ: <phase> をユーザが承認」を追記。`status.json` の `checkpoints.<phase>.status = "approved"` / `approved_at = <ts>` に更新。次フェーズへ進む |
+| `<具体的な変更要求>` (例: 「F002 の機能定義を見直して」) | 該当 FID / ドキュメントを briefing に含めて該当 Agent (`basic-design` / `detailed-design`) を再 spawn。完了後に auto-check → review per_feature → review cross → 再 checkpoint |
+| `skip checkpoint` / 「スキップ」 (明示のみ) | `decisions.md` に「YYYY-MM-DDTHH:MM:SSZ: ユーザにより <phase> checkpoint をスキップ」を追記。`checkpoints.<phase>.status = "skipped"` / `skipped_at = <ts>` に。次フェーズへ進む |
+
+### サマリ提示フォーマット (オーケストレータが組み立てる)
+
+basic-design 完了時:
+
+```
+【基本設計 完了確認 — ユーザチェックポイント】
+
+成果物:
+  - docs/01_basic_design/system-overview.md
+  - docs/01_basic_design/feature-list.md   (F001, F002, F003)
+  - docs/01_basic_design/system-architecture.md
+  - docs/01_basic_design/non-functional.md
+
+機能ID: F001, F002, F003  (詳細は feature-list.md)
+レビュー結果: per_feature pass / cross pass
+auto-check: MUST 全 pass / SHOULD warnings 0 / MAY info 2 件 (lychee による外部リンク警告)
+未解決 open-questions: 0 件
+主要決定事項 (今フェーズで決まったもの):
+  - 言語/FW: Python 3.13 + FastAPI (decisions.md)
+  - DB: PostgreSQL 16
+  - ...
+
+この内容で詳細設計に進めてよろしいですか?
+- "approve" → 詳細設計フェーズに進みます
+- "<具体的な指摘や変更要求>" → 該当箇所を修正のため再 spawn します
+- "skip checkpoint" → 承認なしで進めます (decisions.md に記録)
+```
+
+detailed-design 完了時も同様のフォーマットで、機能ごとの詳細設計5ドキュメントのパス、状態遷移 / DB 設計 / API スキーマの要約を含める。
+
+### スキップの厳格化
+
+- **「skip checkpoint」は明示文字列のみ受理**。「いいかな」「飛ばして」のような曖昧表現は再確認する
+- スキップを記録する `decisions.md` エントリには **スキップ理由** をユーザに 1 行求めて記録する (例: 「個人プロジェクトで自分が承認権限を持つため」「緊急対応中」)
+- スキップは **「このフェーズの 1 回」のみ**。次フェーズの checkpoint には影響しない (project-config で恒久的に無効化したい場合は次節参照)
+
+### project レベルでチェックポイントを無効化したい場合
+
+開発スタイル上 checkpoint が不要なプロジェクトでは、`<PROJECT_ROOT>/.dev-workflow/rules/project/project-config.md` に以下を記述:
+
+```markdown
+## チェックポイント設定 (human-checkpoint)
+- basic-design: disabled
+  - 理由: 個人プロジェクトのため
+- detailed-design: enabled
+```
+
+`dev-workflow-overlay` (および overlay 経由でない素の `dev-workflow`) はこの設定を Read し、disabled となっているフェーズの checkpoint はスキップする。デフォルトは両方 `enabled`。
 
 ## テスト実行ゲート (test-run)
 

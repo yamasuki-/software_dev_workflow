@@ -20,5 +20,23 @@
   "features": [],
   "open_questions_path": ".dev-workflow/open-questions.md",
   "decisions_log_path": ".dev-workflow/decisions.md",
+  "checkpoints": {
+    "basic_design": {
+      "status": "pending",
+      "enabled": true,
+      "approved_at": null,
+      "skipped_at": null,
+      "approval_notes": null,
+      "history": []
+    },
+    "detailed_design": {
+      "status": "pending",
+      "enabled": true,
+      "approved_at": null,
+      "skipped_at": null,
+      "approval_notes": null,
+      "history": []
+    }
+  },
   "notes": ""
 }

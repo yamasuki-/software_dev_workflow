@@ -26,6 +26,22 @@ flowchart TD
 - ブリーフは「今回のスコープ + 既知の前提」だけを渡す (手順は Agent の system prompt に組み込み済み)。
 - 状態の引き継ぎはすべて `.dev-workflow/` ファイル経由。
 
+## 人間チェックポイント (human-checkpoint)
+
+設計フェーズの **最重要マイルストーン** では、auto-check と LLM レビューが全て pass しても **dev-workflow は次フェーズに進まず、ユーザに明示承認を求めて停止する**。
+
+| タイミング | 対象 |
+|---|---|
+| `basic-design` cross review pass 直後 | プロジェクト全体 (機能ID / アーキ / NFR の確定) |
+| `detailed-design` cross review pass 直後 | 全 FID の詳細設計の確定 |
+
+ユーザの応答による分岐:
+- **approve** → `decisions.md` と `status.json (checkpoints.<phase>)` に記録、次フェーズへ
+- **変更要求** → 該当 Agent を再 spawn (フィードバックをブリーフに含める)、再 review → 再 checkpoint
+- **`skip checkpoint`** (明示文字列のみ) → 理由を 1 行ユーザに求めて `decisions.md` に記録、次フェーズへ
+
+詳細は `dev-workflow/SKILL.md` の §「人間チェックポイント」を参照。
+
 ## 全体フロー
 
 ```mermaid
@@ -35,6 +51,9 @@ flowchart TD
     C --> CR{"basic-design-review"}
     CR -->|fail| C
     CR -->|pass| C1["機能ID確定<br/>F001, F002, F003 + COMMON 候補"]
+    C1 --> CP1{"🛑 human-checkpoint<br/>basic-design 承認"}
+    CP1 -->|変更要求| C
+    CP1 -->|approve / skip| DDBatch
 
     subgraph Batch ["フェーズバッチ: 同じフェーズを全機能まとめて → 2 段レビュー"]
       direction TB
@@ -43,7 +62,9 @@ flowchart TD
       DDR1 -->|fail| DDBatch
       DDR1 -->|"all pass"| DDR2{"review cross<br/>全機能横断"}
       DDR2 -->|fail| DDBatch
-      DDR2 --> TDBatch["test-design"]
+      DDR2 --> CP2{"🛑 human-checkpoint<br/>detailed-design 承認"}
+      CP2 -->|変更要求| DDBatch
+      CP2 -->|approve / skip| TDBatch["test-design"]
       TDBatch --> TDR1{"review per_feature"}
       TDR1 --> TDR2{"review cross"}
       TDR2 --> TIBatch["test-implementation<br/>TDD Red"]
@@ -57,7 +78,6 @@ flowchart TD
       TR1 --> TR2{"review cross"}
     end
 
-    C1 --> DDBatch
     TR2 -->|"fail<br/>未実施あり"| TestBatch
     TR2 -->|"pass + Fail なし"| L["最終レポート<br/>00_final_report.md"]
     TR2 -->|"pass + Fail あり"| J["bug-fix<br/>5ステップ反復"]

@@ -49,6 +49,38 @@
 通常は `dev-workflow` (Skill) を起動する。`dev-workflow` が状況を判断して上記 16 個の Agent を **`Task(subagent_type="<name>")` で spawn** する。
 ユーザが特定の Agent を直接呼びたい場合 (例: 既存プロジェクトの途中から `implementation` だけ使いたい) は、Claude に「implementation Agent を spawn して」と頼めば `Task(subagent_type="implementation")` が呼ばれる。
 
+### 人間チェックポイント (human-checkpoint)
+
+設計フェーズの **最重要マイルストーン** では、ツールチェック (auto-check) と LLM レビュー (per_feature + cross) が全て pass しても、`dev-workflow` は次フェーズに進まず **ユーザに明示承認を求めて停止** する。
+
+| タイミング | 対象 |
+|---|---|
+| `basic-design` cross review pass 直後 | 機能 ID / アーキ / NFR の確定 |
+| `detailed-design` cross review pass 直後 | 全 FID の詳細設計の確定 |
+
+#### ユーザの応答パターン
+
+| 応答 | 動作 |
+|---|---|
+| `approve` / 「承認」 | `decisions.md` と `status.json (checkpoints.<phase>)` に記録 → 次フェーズへ |
+| `<具体的な変更要求>` (例: 「F002 の機能定義を見直して」) | 該当 Agent を再 spawn (フィードバックを briefing に含める) → auto-check → review → 再 checkpoint |
+| `skip checkpoint` (明示文字列のみ) | スキップ理由を 1 行ユーザに求め `decisions.md` に記録 → 次フェーズへ |
+
+> 曖昧表現 (「いいかな」「飛ばして」など) は再確認されます。
+
+#### プロジェクト単位で無効化
+
+開発スタイル上 checkpoint が不要な場合、`<PROJECT_ROOT>/.dev-workflow/rules/project/project-config.md` に:
+
+```markdown
+## チェックポイント設定 (human-checkpoint)
+- basic-design: disabled
+  - 理由: 個人プロジェクトのため
+- detailed-design: enabled
+```
+
+デフォルトは両方 `enabled`。
+
 ### 動作モデル
 
 ```mermaid
