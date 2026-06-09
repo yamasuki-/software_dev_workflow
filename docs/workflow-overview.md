@@ -73,26 +73,62 @@ flowchart TD
       TIR2 --> ImplBatch["implementation<br/>COMMON 先行 → 各機能<br/>TDD Green"]
       ImplBatch --> IR1{"review per_feature"}
       IR1 --> IR2{"review cross<br/>重複/共通化検出"}
-      IR2 --> TestBatch["testing"]
-      TestBatch --> TR1{"review per_feature"}
-      TR1 --> TR2{"review cross"}
+      IR2 --> TestUnit["testing layer=unit<br/>全機能 並行"]
+      TestUnit --> TUR{"unit-test-review<br/>open_bugs=0?"}
+      TUR -->|"no (bugs)"| BFu["bug-fix → testing retry layer=unit"]
+      BFu --> TUR
+      TUR -->|"yes"| TestInt["testing layer=integration"]
+      TestInt --> TIR{"integration-test-review<br/>open_bugs=0?"}
+      TIR -->|"no"| BFi["bug-fix → testing retry layer=integration"]
+      BFi --> TIR
+      TIR -->|"yes"| TestE2E["testing layer=e2e"]
+      TestE2E --> TER{"e2e-test-review<br/>open_bugs=0?<br/>要件カバレッジ 100%?"}
+      TER -->|"no"| BFe["bug-fix → testing retry layer=e2e"]
+      BFe --> TER
     end
 
-    TR2 -->|"fail<br/>未実施あり"| TestBatch
-    TR2 -->|"pass + Fail なし"| L["最終レポート<br/>00_final_report.md"]
-    TR2 -->|"pass + Fail あり"| J["bug-fix<br/>5ステップ反復"]
+    TER -->|"yes (全 3 layer 完了)"| L["最終レポート<br/>00_final_report.md"]
+    BFu --> J["bug-fix<br/>5ステップ反復"]
+    BFi --> J
+    BFe --> J
     J --> JR{"bug-fix-review"}
     JR -->|fail| J
     JR -->|pass_but_open| J
-    JR -->|pass_and_verified| TestBatch
+    JR -->|pass_and_verified| Retry["testing retry<br/>(同じ layer)"]
+    Retry --> TUR
+    Retry --> TIR
+    Retry --> TER
 ```
 
 **重要なポイント:**
 - フェーズはバッチで進む (機能ごとに最後まで通さない)
+- **testing フェーズは特殊**: `unit → integration → e2e` の **3 層シリアル** で進行。前層の全機能で `open_bugs = 0` になるまで次層を開始しない (詳細は §「testing フェーズの 3 層シリアル化」)
 - 各フェーズは全機能の作業が揃ってから **auto-check (機械チェック) → 個別レビュー (per_feature, 並行) → 横断レビュー (cross, 1回)** の **3 段ゲート** を通って初めて次フェーズへ
 - **auto-check** はツール (markdownlint / mermaid-cli / linter / typecheck / カバレッジ等) を MUST/SHOULD/MAY の 3 階層で実行する機械チェック。MUST が pass しなければ LLM レビューに進まない
 - 個別レビューは「per-feature 内の整合」を、横断レビューは「機能間の一貫性と共通化機会」をそれぞれ集中して検証
 - 改修・新機能追加で1機能だけ進める場合も同じフロー (バッチ対象が1機能になるだけで、cross も自動的に縮退)
+
+## testing フェーズの 3 層シリアル化
+
+testing フェーズは **層ごとに厳密にシリアル** に進む (`unit → integration → e2e`)。
+各層で **fail が出たら bug-fix で全解消するまで次層に進まない**。これは「単体テストで根本欠陥があるまま結合・E2E を走らせない」ためのゲート。
+
+```
+[Layer 1: 単体]
+  testing (layer=unit, mode=initial)
+    → auto-check → <layer>-test-review (per_feature → cross) — layer ごとに専用 review Agent (unit-test-review / integration-test-review / e2e-test-review)
+    → open_bugs > 0?
+        → yes → bug-fix → testing (layer=unit, mode=retry, 全実行) → 再判定
+        → no  → 次層へ
+[Layer 2: 結合]
+  testing (layer=integration, mode=initial) → ... (同じ流れ)
+[Layer 3: E2E]
+  testing (layer=e2e, mode=initial) → ... (同じ流れ)
+→ 全 3 layer で open_bugs=0 で testing 完了
+```
+
+各 layer の bug-fix → 再 testing は **mode=retry** で同じ layer の全テストをリグレッション込みで再走する (部分実行禁止)。
+不具合票には `found_in_test_layer = unit | integration | e2e` が記録され、bug-fix-review pass 後は **検出された layer** の testing に戻る。
 
 ## ゲートの動作 (test-run → auto-check → per_feature → cross)
 

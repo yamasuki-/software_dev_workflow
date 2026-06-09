@@ -31,7 +31,9 @@
 ├─ implementation.md          ← 言語慣習・エラー処理・パフォーマンス
 ├─ testing.md                 ← カバレッジ計測・E2E 実行
 ├─ implementation-review.md   ← 実装レビュー追加観点 (per_feature + cross)
-└─ testing-review.md          ← テスト結果レビュー追加観点 (per_feature + cross)
+├─ unit-test-review.md        ← 単体テスト結果レビュー追加観点 (per_feature + cross)
+├─ integration-test-review.md ← 結合テスト結果レビュー追加観点
+└─ e2e-test-review.md         ← E2E テスト結果レビュー追加観点
 ```
 
 各ファイルは共通フォーマット (`ADD` / `OVERRIDE` / `DISABLE` / `ADDITIONAL_ARTIFACTS` / `REVIEW_EXTRAS`) に従う。

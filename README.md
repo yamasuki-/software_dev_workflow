@@ -39,8 +39,10 @@
 | `test-implementation-review`   | テストコード ↔ テスト設計 と Red 確認の検証           |
 | `implementation`               | プロダクトコード作成 (失敗テストを Pass = TDD Green)    |
 | `implementation-review`        | プロダクトコード ↔ 詳細設計 + Green 確認、勝手な変更の禁止 |
-| `testing`                      | テスト実行 (包括的に再走し結果を記録、Fail は不具合票へ) |
-| `testing-review`               | 全テスト完了確認 (未実施/実施不可で終わっていないか)  |
+| `testing`                      | テスト実行 (1 回の spawn で **1 層のみ** 実行)。dev-workflow は `unit → integration → e2e` の順で **シリアル** に呼び、前層の `open_bugs = 0` まで次層に進めない。各層で fail が出たら bug-fix → 再 testing (mode=retry, リグレッション込み) のループ |
+| `unit-test-review`             | 単体テスト結果レビュー。検証対象 = **詳細設計**。詳細設計 5 ドキュメント (functional / state / sequence / UI / DB) の全要素カバー、AAA / 1 テスト 1 観点 / モック適切性 / 分岐網羅率を判定 |
+| `integration-test-review`      | 結合テスト結果レビュー。検証対象 = **基本設計**。アーキ I/F / 機能間連携 / データフロー / コンポーネント境界の網羅、実 DB / 実外部システム使用、N+1 / トランザクション境界を判定 |
+| `e2e-test-review`              | E2E テスト結果レビュー。検証対象 = **要件定義書**。要件 (USDM `R-###` / ユースケース) の **100% カバー** を必須、受入条件転記、業務シナリオ、手動 E2E 再現性を判定 |
 | `bug-fix`                      | 不具合修正 (原因調査→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ) |
 | `bug-fix-review`               | 反復ごとに 5ステップの規律違反を検証                  |
 | `test-run`                     | テスト実行ゲート (mode=red / green)。結果を `docs/04_test_results/<FID>/<phase>-<mode>-confirmation.md` に出力。`*-review` Agent はこれを読むだけ |
@@ -139,7 +141,9 @@ $REPO_ROOT/
    ├─ implementation/{...}
    ├─ implementation-review/{...}
    ├─ testing/{...}
-   ├─ testing-review/{...}
+   ├─ unit-test-review/{unit-test-review.md, resources/}
+   ├─ integration-test-review/{integration-test-review.md, resources/}
+   ├─ e2e-test-review/{e2e-test-review.md, resources/}
    ├─ bug-fix/{...}
    ├─ bug-fix-review/{...}
    ├─ test-run/{test-run.md, resources/{scripts/, report-template.md}}
@@ -1027,7 +1031,9 @@ description: 実装後にセキュリティ観点の専門レビューを行う
 ├─ implementation.md          ← 言語慣習・エラー処理・パフォーマンス
 ├─ testing.md                 ← カバレッジ計測・E2E 実行
 ├─ implementation-review.md   ← 実装レビュー追加観点 (per_feature + cross)
-└─ testing-review.md          ← テスト結果レビュー追加観点 (per_feature + cross)
+├─ unit-test-review.md        ← 単体テスト結果レビュー追加観点 (per_feature + cross)
+├─ integration-test-review.md ← 結合テスト結果レビュー追加観点
+└─ e2e-test-review.md         ← E2E テスト結果レビュー追加観点
 ```
 
 格納場所 (REPO 内 / インストール後共通):
@@ -1395,10 +1401,10 @@ flowchart TD
     IR1 -->|fail| ImplBatch
     IR1 -->|all pass| IR2{implementation-review cross 重複検出}
     IR2 -->|fail| ImplBatch
-    IR2 -->|pass| TestBatch[testing 全機能 並行]
-    TestBatch --> TR1{testing-review per_feature}
+    IR2 -->|pass| TestBatch[testing layer=unit→integration→e2e<br/>各層 直列 全機能 並行]
+    TestBatch --> TR1{<layer>-test-review per_feature<br/>(unit / integration / e2e)}
     TR1 -->|fail| TestBatch
-    TR1 -->|all pass| TR2{testing-review cross}
+    TR1 -->|all pass| TR2{<layer>-test-review cross}
     TR2 -->|fail| TestBatch
     TR2 -->|pass no fail| Final[最終レポート]
     TR2 -->|pass with fail| Bug[bug-fix 5ステップ反復]

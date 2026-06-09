@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.3",
+  "schema_version": "1.4",
   "feature_id": "F001",
   "name": "<機能名>",
   "summary": "<1〜2行で機能の概要>",
@@ -148,26 +148,85 @@
       "status": "pending",
       "started_at": null,
       "completed_at": null,
-      "subtasks": {
-        "unit_test":        { "status": "pending", "artifact": "docs/04_test_results/F001/unit-test-result.md" },
-        "integration_test": { "status": "pending", "artifact": "docs/04_test_results/F001/integration-test-result.md" },
-        "e2e_test":         { "status": "pending", "artifact": "docs/04_test_results/F001/e2e-test-result.md" }
-      },
-      "review": {
-        "status": "pending",
-        "per_feature": {
+      "current_layer": "unit",
+      "layers": {
+        "unit": {
           "status": "pending",
+          "artifact": "docs/04_test_results/F001/unit-test-result.md",
+          "executed_at": null,
+          "last_mode": null,
           "iteration": 0,
-          "last_result": null,
-          "last_reviewed_at": null,
-          "review_doc": "docs/06_reviews/F001/testing-review-per-feature.md"
+          "open_bugs": [],
+          "closed_bugs": [],
+          "review": {
+            "status": "pending",
+            "per_feature": {
+              "status": "pending",
+              "iteration": 0,
+              "last_result": null,
+              "last_reviewed_at": null,
+              "review_doc": "docs/06_reviews/F001/unit-test-review-per-feature.md"
+            },
+            "cross": {
+              "status": "pending",
+              "iteration": 0,
+              "last_result": null,
+              "last_reviewed_at": null,
+              "review_doc": "docs/06_reviews/_cross/unit-test-cross-review.md"
+            }
+          }
         },
-        "cross": {
+        "integration": {
           "status": "pending",
+          "artifact": "docs/04_test_results/F001/integration-test-result.md",
+          "executed_at": null,
+          "last_mode": null,
           "iteration": 0,
-          "last_result": null,
-          "last_reviewed_at": null,
-          "review_doc": "docs/06_reviews/_cross/testing-cross-review.md"
+          "open_bugs": [],
+          "closed_bugs": [],
+          "review": {
+            "status": "pending",
+            "per_feature": {
+              "status": "pending",
+              "iteration": 0,
+              "last_result": null,
+              "last_reviewed_at": null,
+              "review_doc": "docs/06_reviews/F001/integration-test-review-per-feature.md"
+            },
+            "cross": {
+              "status": "pending",
+              "iteration": 0,
+              "last_result": null,
+              "last_reviewed_at": null,
+              "review_doc": "docs/06_reviews/_cross/integration-test-cross-review.md"
+            }
+          }
+        },
+        "e2e": {
+          "status": "pending",
+          "artifact": "docs/04_test_results/F001/e2e-test-result.md",
+          "executed_at": null,
+          "last_mode": null,
+          "iteration": 0,
+          "open_bugs": [],
+          "closed_bugs": [],
+          "review": {
+            "status": "pending",
+            "per_feature": {
+              "status": "pending",
+              "iteration": 0,
+              "last_result": null,
+              "last_reviewed_at": null,
+              "review_doc": "docs/06_reviews/F001/e2e-test-review-per-feature.md"
+            },
+            "cross": {
+              "status": "pending",
+              "iteration": 0,
+              "last_result": null,
+              "last_reviewed_at": null,
+              "review_doc": "docs/06_reviews/_cross/e2e-test-cross-review.md"
+            }
+          }
         }
       }
     },
