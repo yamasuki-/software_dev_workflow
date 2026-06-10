@@ -44,6 +44,10 @@ flowchart TD
 
 詳細は `dev-workflow/SKILL.md` の §「人間チェックポイント」を参照。
 
+## Git 統合 (commit ゲート)
+
+開始時に専用ブランチであることを確認する (`main` / `master` / `develop` 上では開始しない)。各ゲート通過時 (review pass / checkpoint approve / testing layer 完了 / bug verified / 最終レポート) に **オーケストレータが commit を作成** する (`[dev-workflow] <phase>: ...` 形式)。push はユーザが履歴を確認したうえで手動で行う。`git reset` / `git rebase` / `--amend` / `--force` などの履歴改変・変更破棄は禁止 (やり直しは新しい commit を積む前方修正のみ)。詳細は `dev-workflow/SKILL.md` §「Git 統合 (commit ゲート)」。
+
 ## 全体フロー
 
 ```mermaid

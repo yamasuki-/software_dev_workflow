@@ -64,10 +64,13 @@ flowchart TD
 
 ## 起動時の手順
 
-### Step 1 : プロジェクトルートの特定
+### Step 1 : プロジェクトルートの特定と Git 前提チェック
 
 1. 現在の作業対象ディレクトリ (`PROJECT_ROOT`) をユーザに確認する。
-2. `PROJECT_ROOT/.dev-workflow/project.json` の有無で初回起動か再開かを判定。
+2. **Git 前提チェック (§「Git 統合」参照)**: `git rev-parse --abbrev-ref HEAD` で現在ブランチを確認する。
+   - `main` / `master` / `develop` 等の保護対象ブランチ上なら **開始せず停止**。ユーザに専用ブランチ (例: `dev-workflow/<プロジェクト名>`) の作成・切替を依頼する (ユーザ承認のもと `git switch -c` で作成してよい)
+   - git リポジトリでない場合はユーザに確認: `git init` + 専用ブランチで始めるか、Git 統合なしで進めるか (`decisions.md` に記録)
+3. `PROJECT_ROOT/.dev-workflow/project.json` の有無で初回起動か再開かを判定。
 
 ### Step 2-A : 初回起動の場合
 
@@ -241,6 +244,10 @@ bug-fix (バグごと反復) → bug-fix-review (反復ごと)
 【共有ファイルの扱い】
 project.json / open-questions.md / decisions.md には直接書き込まないこと
 (オーケストレータが戻り値から一元追記する)。
+
+【Git の扱い】
+git 操作 (add / commit / reset / push / branch 等) は一切行わないこと。
+commit はオーケストレータがゲート通過時に行う。
 ```
 
 `subagent_type` に渡す値は agents/ 配下の `name` (frontmatter):
@@ -466,6 +473,7 @@ flowchart TD
 ハンドリング:
 1. **pass**:
    - `status.json` の `phases.<phase>.review.status = "completed"`, `last_result = "pass"`, `iteration += 1`
+   - §「Git 統合」の commit ポイントに該当する場合は **commit を作成** してから次へ
    - `current_phase` を次フェーズに進める
    - 次フェーズのサブエージェントを spawn
 2. **fail**:
@@ -481,6 +489,41 @@ flowchart TD
 
 - レビューが fail だった場合、その判定を無視して次フェーズに進めることは禁止
 - ただしユーザが明示的に「このフェーズのレビューはスキップして進めて」と指示した場合のみ、`decisions.md` に「ユーザによるレビュースキップ承認」を記録した上で進めてよい
+
+## Git 統合 (commit ゲート)
+
+ワークフローの品質ゲートと Git 履歴を 1:1 で対応づける。**git 操作はオーケストレータのみ** が行う (サブエージェントは禁止。ブリーフにも明記済み)。
+
+### 前提: 専用ブランチ
+
+- ワークフロー開始時 (Step 1) に現在ブランチを確認し、**`main` / `master` / `develop` 等の保護対象ブランチ上では開始しない** (停止してユーザに専用ブランチへの切替を依頼)
+- 専用ブランチの命名例: `dev-workflow/<プロジェクト名>`。作成はユーザ承認のもと `git switch -c` で行ってよい
+- git リポジトリでないプロジェクトでは、ユーザの選択 (`git init` する / Git 統合なしで進める) を `decisions.md` に記録。「なし」の場合、本節の commit はすべてスキップする
+
+### commit ポイント (ゲート通過時に commit)
+
+ゲートを通過するたびに、その時点の変更すべて (`git add -A`: docs / src / tests / `.dev-workflow/` を含む) を 1 commit にする:
+
+| ゲート | commit メッセージ (1 行目) |
+|---|---|
+| `requirements-review` pass | `[dev-workflow] requirements: review pass (R-001..R-NNN)` |
+| human-checkpoint approve / skip | `[dev-workflow] checkpoint: <phase> approved` (skip 時は `skipped`) |
+| `basic-design-review` pass | `[dev-workflow] basic-design: review pass (F001..Fn)` |
+| `<phase>` cross review pass (detailed-design / test-design / test-implementation / implementation) | `[dev-workflow] <phase>: cross review pass` |
+| `security-review` cross pass | `[dev-workflow] security-review: pass` |
+| testing layer 完了 (review pass かつ `open_bugs = 0`) | `[dev-workflow] testing(<layer>): completed` |
+| `bug-fix-review` が `pass_and_verified` | `[dev-workflow] bug-fix <BID>: verified` |
+| 最終レポート作成 | `[dev-workflow] project completed: final report` |
+
+- メッセージ本文 (2 行目以降) に、対象 FID と pass したレビュー票のパスを 1〜3 行で書く
+- **fail → 再 spawn の修正中は commit しない** (ゲートを通過した状態だけが履歴に残る)。セッション中断時のみ例外として `[dev-workflow] WIP: <どこまで進んだか>` の WIP commit を作ってよい (再開後、次のゲート通過 commit に内容を引き継ぐ)
+
+### 禁止事項 (履歴は必ず人が確認できる状態を保つ)
+
+- **`git push` をしない**。push はユーザが commit 履歴を確認したうえで手動で行う
+- **commit 履歴の削除・改変を一切しない**: `git reset` (--soft / --mixed / --hard すべて)、`git rebase`、`git commit --amend`、`git push --force`、ブランチ/タグの削除、`git checkout -- <file>` / `git restore` による変更破棄、を禁止
+- やり直しは **前方修正のみ**: 誤った内容が commit されても、修正を新しい commit として積む (`git revert` は前方修正なので可)
+- 例外はユーザが明示的に指示した場合のみ。その際は指示内容を `decisions.md` に記録してから実施する
 
 ## 人間チェックポイント (human-checkpoint)
 
@@ -509,7 +552,7 @@ flowchart TD
 
 | ユーザ応答 | オーケストレータの動作 |
 |---|---|
-| `approve` / 「承認」 / 「OK」など肯定 | `decisions.md` に「YYYY-MM-DDTHH:MM:SSZ: <phase> をユーザが承認」を追記。`status.json` の `checkpoints.<phase>.status = "approved"` / `approved_at = <ts>` に更新。次フェーズへ進む |
+| `approve` / 「承認」 / 「OK」など肯定 | `decisions.md` に「YYYY-MM-DDTHH:MM:SSZ: <phase> をユーザが承認」を追記。`status.json` の `checkpoints.<phase>.status = "approved"` / `approved_at = <ts>` に更新。**§「Git 統合」に従い commit を作成**。次フェーズへ進む |
 | `<具体的な変更要求>` (例: 「F002 の機能定義を見直して」) | 該当 FID / ドキュメントを briefing に含めて該当 Agent (`basic-design` / `detailed-design`) を再 spawn。完了後に auto-check → review per_feature → review cross → 再 checkpoint |
 | `skip checkpoint` / 「スキップ」 (明示のみ) | `decisions.md` に「YYYY-MM-DDTHH:MM:SSZ: ユーザにより <phase> checkpoint をスキップ」を追記。`checkpoints.<phase>.status = "skipped"` / `skipped_at = <ts>` に。次フェーズへ進む |
 
