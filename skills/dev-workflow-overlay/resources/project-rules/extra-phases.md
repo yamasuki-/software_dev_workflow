@@ -39,16 +39,18 @@ bug_fix                       bug_fix_review
 
 ---
 
-## 例 1: セキュリティレビューを実装後に挿入
+## 例 1: アクセシビリティレビューを実装後に挿入
+
+> 注: セキュリティレビュー (`security-review`) は現在 **ベース構成の正式 Agent** (implementation-review の後段ブロッキングゲート) に昇格済みのため、ここで追加定義する必要はない。観点追加は `.dev-workflow/rules/(stack|project)/security-review.md` の `REVIEW_EXTRAS` を使う。以下は別観点を追加する例。
 
 ```
-## PHASE: security-review
-position: after implementation_review
-skill: security-review
+## PHASE: a11y-review
+position: after security_review
+skill: a11y-review
 project_local: yes
 gating: blocks_next_phase_on_fail
-artifact_path: docs/07_security/<FID>/
-description: 実装後にセキュリティ観点 (認証/認可/入力検証/Secrets) の専門レビューを行う
+artifact_path: docs/08_a11y/<FID>/
+description: 実装後にアクセシビリティ観点 (WCAG/キーボード操作/コントラスト) の専門レビューを行う
 ```
 
 ## 例 2: パフォーマンス計測 (警告のみ)

@@ -13,10 +13,10 @@
 - **推測しない**: 不明点はユーザに確認する。重要度が高ければ即時、軽微なものはフェーズ末でまとめて (ハイブリッド方針)。
 - **Mermaid を用いた図表**: 状態遷移、ER図、シーケンス図は Mermaid で記述。
 
-## 構成 (Skill 2 個 + Agent 16 個)
+## 構成 (Skill 2 個 + Agent 20 個)
 
 `dev-workflow` / `dev-workflow-overlay` は **ユーザが呼ぶ Skill** (`~/.claude/skills/`)。
-残り 16 個は **サブエージェント** として `Task(subagent_type="<name>")` で spawn される Agent (`~/.claude/agents/<name>/<name>.md`)。
+残り 20 個は **サブエージェント** として `Task(subagent_type="<name>")` で spawn される Agent (`~/.claude/agents/<name>/<name>.md`)。
 
 ### Skill (2 個)
 
@@ -25,10 +25,12 @@
 | `dev-workflow`                 | オーケストレータ。プロジェクト全体の進行を統括 (ユーザとの長期対話、進捗判断、Agent spawn) |
 | `dev-workflow-overlay`         | `dev-workflow` のラッパー。プロジェクト直下 `.dev-workflow/rules/` のプロジェクト固有ルール (必須) と `extra-phases.md` の追加フェーズを反映してベースを実行する。Agent 本体の完全上書きも `<PROJECT_ROOT>/.claude/agents/<name>.md` で可能 (Advanced) |
 
-### Agent (16 個)
+### Agent (20 個)
 
 | Agent                          | 役割                                                  |
 | ------------------------------ | ----------------------------------------------------- |
+| `requirements`                 | 要件定義 (要件ID `R-###` 採番・受入条件の明示化・USDM 構造検証)。V字の左端 |
+| `requirements-review`          | 要件定義レビュー (テスト可能性・一意性・矛盾・スコープ境界)。pass 後に human-checkpoint |
 | `basic-design`                 | 基本設計 (システム全体方針 + 機能IDの確定)             |
 | `basic-design-review`          | 基本設計 ↔ 要件 の整合確認                            |
 | `detailed-design`              | 詳細設計 (機能ごとに UI/機能/状態/DB/シーケンスの5種)  |
@@ -39,16 +41,16 @@
 | `test-implementation-review`   | テストコード ↔ テスト設計 と Red 確認の検証           |
 | `implementation`               | プロダクトコード作成 (失敗テストを Pass = TDD Green)    |
 | `implementation-review`        | プロダクトコード ↔ 詳細設計 + Green 確認、勝手な変更の禁止 |
-| `testing`                      | テスト実行 (1 回の spawn で **1 層のみ** 実行)。dev-workflow は `unit → integration → e2e` の順で **シリアル** に呼び、前層の `open_bugs = 0` まで次層に進めない。各層で fail が出たら bug-fix → 再 testing (mode=retry, リグレッション込み) のループ |
+| `security-review`              | セキュリティ専門コードレビュー (implementation-review の後段ゲート)。OWASP Top 10 / CSRF・SSTI・XXE・マスアサインメント / ビジネスロジック悪用・レースコンディション・DoS / OWASP LLM Top 10 (LLM 機能がある場合) / ハードコード秘密情報・安全でない設定・セキュリティヘッダ / 依存ライブラリの既知脆弱性 / IaC・CI 設定 / `non-functional.md` のセキュリティ要件との整合を per_feature + cross で検証。Critical/High があれば fail で差し戻す |
+| `testing`                      | テスト実行 Agent。層実行 (mode=initial/retry、1 回の spawn で **1 層のみ**) に加え、**確認モード (mode=red/green)** で test-implementation 直後の Red 確認 / implementation 直後の Green 確認も担う (結果は `docs/04_test_results/<FID>/<phase>-<mode>-confirmation.md`、`*-review` Agent はこれを読むだけ)。dev-workflow は `unit → integration → e2e` の順で **シリアル** に呼び、前層の `open_bugs = 0` まで次層に進めない。各層で fail が出たら bug-fix → 再 testing (mode=retry, リグレッション込み) のループ |
 | `unit-test-review`             | 単体テスト結果レビュー。検証対象 = **詳細設計**。詳細設計 5 ドキュメント (functional / state / sequence / UI / DB) の全要素カバー、AAA / 1 テスト 1 観点 / モック適切性 / 分岐網羅率を判定 |
 | `integration-test-review`      | 結合テスト結果レビュー。検証対象 = **基本設計**。アーキ I/F / 機能間連携 / データフロー / コンポーネント境界の網羅、実 DB / 実外部システム使用、N+1 / トランザクション境界を判定 |
 | `e2e-test-review`              | E2E テスト結果レビュー。検証対象 = **要件定義書**。要件 (USDM `R-###` / ユースケース) の **100% カバー** を必須、受入条件転記、業務シナリオ、手動 E2E 再現性を判定 |
 | `bug-fix`                      | 不具合修正 (原因調査→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ) |
 | `bug-fix-review`               | 反復ごとに 5ステップの規律違反を検証                  |
-| `test-run`                     | テスト実行ゲート (mode=red / green)。結果を `docs/04_test_results/<FID>/<phase>-<mode>-confirmation.md` に出力。`*-review` Agent はこれを読むだけ |
 | `auto-check`                   | 機械チェックゲート。`stack-config.md` 由来の MUST/SHOULD/MAY ツール (linter / typecheck / markdownlint / カバレッジ等) を実行。MUST 失敗でフェーズ差し戻し |
 
-通常は `dev-workflow` (Skill) を起動する。`dev-workflow` が状況を判断して上記 16 個の Agent を **`Task(subagent_type="<name>")` で spawn** する。
+通常は `dev-workflow` (Skill) を起動する。`dev-workflow` が状況を判断して上記 20 個の Agent を **`Task(subagent_type="<name>")` で spawn** する。
 ユーザが特定の Agent を直接呼びたい場合 (例: 既存プロジェクトの途中から `implementation` だけ使いたい) は、Claude に「implementation Agent を spawn して」と頼めば `Task(subagent_type="implementation")` が呼ばれる。
 
 ### 人間チェックポイント (human-checkpoint)
@@ -57,6 +59,7 @@
 
 | タイミング | 対象 |
 |---|---|
+| `requirements-review` pass 直後 | 要件 (R-### / 受入条件 / スコープ境界) の確定 |
 | `basic-design` cross review pass 直後 | 機能 ID / アーキ / NFR の確定 |
 | `detailed-design` cross review pass 直後 | 全 FID の詳細設計の確定 |
 
@@ -76,12 +79,13 @@
 
 ```markdown
 ## チェックポイント設定 (human-checkpoint)
+- requirements: enabled
 - basic-design: disabled
   - 理由: 個人プロジェクトのため
 - detailed-design: enabled
 ```
 
-デフォルトは両方 `enabled`。
+デフォルトは 3 つとも `enabled`。
 
 ### 動作モデル
 
@@ -128,6 +132,8 @@ $REPO_ROOT/
 │           ├─ ruby-rails/        (7 files)
 │           └─ README.md
 └─ agents/                                     # Agent (Skill から spawn される)。~/.claude/agents/ にインストール
+   ├─ requirements/{requirements.md, resources/}
+   ├─ requirements-review/{requirements-review.md, resources/}
    ├─ basic-design/
    │  ├─ basic-design.md                       # frontmatter (name/description/tools/model) + system prompt
    │  └─ resources/                            # 旧 skills/basic-design/resources/ 由来
@@ -140,13 +146,13 @@ $REPO_ROOT/
    ├─ test-implementation-review/{...}
    ├─ implementation/{...}
    ├─ implementation-review/{...}
-   ├─ testing/{...}
+   ├─ security-review/{security-review.md, resources/}
+   ├─ testing/{testing.md, resources/{scripts/, report-template.md, ...}}
    ├─ unit-test-review/{unit-test-review.md, resources/}
    ├─ integration-test-review/{integration-test-review.md, resources/}
    ├─ e2e-test-review/{e2e-test-review.md, resources/}
    ├─ bug-fix/{...}
    ├─ bug-fix-review/{...}
-   ├─ test-run/{test-run.md, resources/{scripts/, report-template.md}}
    └─ auto-check/{auto-check.md, resources/{scripts/, report-template.md}}
 ```
 
@@ -160,7 +166,7 @@ cp -R agents/*  ~/.claude/agents/
 - `skills/` の中身はユーザが呼ぶ「ワークフローの入口」 (Skill カタログに自動 load される)
 - `agents/` の中身は `Task(subagent_type="<name>")` で spawn される「単一責務のサブエージェント」 (Agent カタログに自動 load される)
 
-> 旧バージョンとの互換性メモ: 旧構成では 18 個すべてが `skills/` 配下にあったが、Skill (2) と Agent (16) に分離した。古い `skills/<phase>/` 等が残っている場合は手動で削除して `~/.claude/agents/` 側に揃えること。
+> 旧バージョンとの互換性メモ: 旧構成では 18 個すべてが `skills/` 配下にあったが、Skill (2) と Agent (16) に分離した (その後 `security-review` / `requirements` / `requirements-review` を追加、`test-run` を `testing` に統合し、現在 Agent は 20)。古い `skills/<phase>/` 等が残っている場合は手動で削除して `~/.claude/agents/` 側に揃えること。
 
 ## 新規プロジェクトでの使い方
 
@@ -180,7 +186,7 @@ PowerShell 例 (Windows):
 # このリポジトリのクローン先 (環境に合わせて書き換え)
 $RepoRoot = "$env:USERPROFILE\github\claudecode_settings"
 
-# Skill (2 個) と Agent (16 個) をユーザグローバルに設置
+# Skill (2 個) と Agent (20 個) をユーザグローバルに設置
 $ClaudeSkills = "$env:USERPROFILE\.claude\skills"
 $ClaudeAgents = "$env:USERPROFILE\.claude\agents"
 New-Item -ItemType Directory -Force -Path $ClaudeSkills | Out-Null
@@ -195,7 +201,7 @@ bash / macOS / Linux 例:
 # このリポジトリのクローン先 (環境に合わせて書き換え)
 REPO_ROOT="$HOME/dev/claudecode_settings"
 
-# Skill (2 個) と Agent (16 個) をユーザグローバルに設置
+# Skill (2 個) と Agent (20 個) をユーザグローバルに設置
 mkdir -p ~/.claude/skills ~/.claude/agents
 cp -R "$REPO_ROOT/skills/"* ~/.claude/skills/
 cp -R "$REPO_ROOT/agents/"* ~/.claude/agents/
@@ -990,21 +996,23 @@ flowchart TD
 
 ### 追加フェーズ — `<project>/.dev-workflow/rules/extra-phases.md`
 
-ベースワークフローにフェーズを **新規挿入** できる。例:
+ベースワークフローにフェーズを **新規挿入** できる。例 (アクセシビリティ専門レビューを実装後に追加):
 
 ```
-## PHASE: security-review
-position: after implementation_review
-skill: security-review
+## PHASE: a11y-review
+position: after security_review
+skill: a11y-review
 project_local: yes
 gating: blocks_next_phase_on_fail
-artifact_path: docs/07_security/<FID>/
-description: 実装後にセキュリティ観点の専門レビューを行う
+artifact_path: docs/08_a11y/<FID>/
+description: 実装後にアクセシビリティ観点の専門レビューを行う
 ```
 
-- 対応するスキルは `<project>/.claude/skills/security-review/SKILL.md` に配置
+- 対応するスキルは `<project>/.claude/skills/a11y-review/SKILL.md` に配置
 - `gating: blocks_next_phase_on_fail` ならベースのレビューゲートと同等に「pass しないと進めない」
 - `gating: warn_only_on_fail` なら警告のみで進む (`decisions.md` に記録)
+
+> **補足**: セキュリティ専門レビュー (`security-review`) は当初この extra-phase の例だったが、現在は **ベース構成の正式 Agent** に昇格済み (implementation-review の後段ブロッキングゲート)。プロジェクト側で追加定義する必要はない。観点を足したい場合は `.dev-workflow/rules/(stack|project)/security-review.md` の `REVIEW_EXTRAS` を使う。
 
 ### スタックプリセット (stack-presets) — `stack/` 層をゼロから書かずに済ませる
 
@@ -1401,7 +1409,11 @@ flowchart TD
     IR1 -->|fail| ImplBatch
     IR1 -->|all pass| IR2{implementation-review cross 重複検出}
     IR2 -->|fail| ImplBatch
-    IR2 -->|pass| TestBatch[testing layer=unit→integration→e2e<br/>各層 直列 全機能 並行]
+    IR2 -->|pass| SR1{security-review per_feature<br/>OWASP/秘密情報/設定}
+    SR1 -->|fail| ImplBatch
+    SR1 -->|all pass| SR2{security-review cross<br/>依存脆弱性/横断一貫性}
+    SR2 -->|fail| ImplBatch
+    SR2 -->|pass| TestBatch[testing layer=unit→integration→e2e<br/>各層 直列 全機能 並行]
     TestBatch --> TR1{<layer>-test-review per_feature<br/>(unit / integration / e2e)}
     TR1 -->|fail| TestBatch
     TR1 -->|all pass| TR2{<layer>-test-review cross}

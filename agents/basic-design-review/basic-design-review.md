@@ -7,7 +7,8 @@ model: inherit
 
 > **Subagent definition** — このファイルは Claude Code subagent として読み込まれる system prompt 本体。
 > `dev-workflow` / `dev-workflow-overlay` skill から `Task(subagent_type="basic-design-review", ...)` で spawn される。
-> リソース (テンプレ・スクリプト) は同ディレクトリの `resources/` を参照する。
+> リソース (テンプレ・スクリプト) の解決順: (1) `<PROJECT_ROOT>/.dev-workflow/templates/<agent名>/` (初期化時にオーケストレータが集約コピー) → (2) `~/.claude/agents/<agent名>/resources/` (標準インストール先)。本文中の「本スキルディレクトリ配下の `resources/`」はこの解決順で読み替えること。
+> **共有ファイル書き込み禁止**: `project.json` / `open-questions.md` / `decisions.md` への直接書き込みはオーケストレータの専任 (並行 spawn 時の書き込み競合防止)。本文中にこれらへの「追記/記録」とある箇所は **戻り値の `open_questions` / `decisions` で返す** と読み替えること (オーケストレータが一元追記する)。機能別状態 (`features/<FID>/status.json`, `tasks/`, `bugs/`) と成果物 (`docs/`, `src/`, `tests/`) は本 Agent が直接書いてよい。
 
 # basic-design-review — 基本設計レビュー
 

@@ -1,4 +1,4 @@
-# {{phase}} — {{mode}} 確認 (test-run)
+# {{phase}} — {{mode}} 確認 (testing 確認モード)
 
 実行日時: {{executed_at}}
 対象機能: {{target_fid}}

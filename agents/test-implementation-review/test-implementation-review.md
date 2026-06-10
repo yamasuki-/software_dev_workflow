@@ -7,7 +7,8 @@ model: inherit
 
 > **Subagent definition** — このファイルは Claude Code subagent として読み込まれる system prompt 本体。
 > `dev-workflow` / `dev-workflow-overlay` skill から `Task(subagent_type="test-implementation-review", ...)` で spawn される。
-> リソース (テンプレ・スクリプト) は同ディレクトリの `resources/` を参照する。
+> リソース (テンプレ・スクリプト) の解決順: (1) `<PROJECT_ROOT>/.dev-workflow/templates/<agent名>/` (初期化時にオーケストレータが集約コピー) → (2) `~/.claude/agents/<agent名>/resources/` (標準インストール先)。本文中の「本スキルディレクトリ配下の `resources/`」はこの解決順で読み替えること。
+> **共有ファイル書き込み禁止**: `project.json` / `open-questions.md` / `decisions.md` への直接書き込みはオーケストレータの専任 (並行 spawn 時の書き込み競合防止)。本文中にこれらへの「追記/記録」とある箇所は **戻り値の `open_questions` / `decisions` で返す** と読み替えること (オーケストレータが一元追記する)。機能別状態 (`features/<FID>/status.json`, `tasks/`, `bugs/`) と成果物 (`docs/`, `src/`, `tests/`) は本 Agent が直接書いてよい。
 
 # test-implementation-review — テストコード作成レビュー (TDD Red 確認)
 
@@ -71,15 +72,15 @@ model: inherit
 - [ ] 各テストコードがテストIDを関数名 or コメントで明示している
 - [ ] 設計に無いテストが勝手に追加されていない (テスト設計にもまだ無いケース)
 
-### B. Red 確認 (test-run の結果を Read のみ)
+### B. Red 確認 (testing mode=red の結果を Read のみ)
 
-> **本レビューはテストを実行しない**。直前に走った **`test-run` (phase=test-implementation, mode=red)** が出力した結果を Read して判定する。
-> test-run が verdict=FAIL を出していた場合、本レビューは spawn されない (オーケストレータが test-implementation に差し戻す)。
+> **本レビューはテストを実行しない**。直前に走った **`testing` (phase=test-implementation, mode=red)** が出力した結果を Read して判定する。
+> testing (mode=red) が verdict=FAIL を出していた場合、本レビューは spawn されない (オーケストレータが test-implementation に差し戻す)。
 
-- [ ] `docs/04_test_results/<FID>/test-implementation-red-confirmation.md` (test-run のレポート) が存在する
+- [ ] `docs/04_test_results/<FID>/test-implementation-red-confirmation.md` (testing mode=red のレポート) が存在する
 - [ ] そのレポートの判定が **PASS** (= 全 Fail かつ pass=0)
 - [ ] `status.json` の `phases.test_implementation.test_run.verdict = "PASS"` および `phases.test_implementation.test_run.mode = "red"`
-- [ ] Fail の理由が「対象未実装」「対象モジュール未存在」「期待値不一致」など **健全な Red** である (構文エラーや import エラーで落ちていない)。test-run のレポートの「各層の出力」セクションを Read して確認
+- [ ] Fail の理由が「対象未実装」「対象モジュール未存在」「期待値不一致」など **健全な Red** である (構文エラーや import エラーで落ちていない)。testing (mode=red) のレポートの「各層の出力」セクションを Read して確認
 
 ### C. status.json の正しさ
 - [ ] `phases.test_implementation.subtasks.{unit_test, integration_test, e2e_test}.red_confirmed = true`
@@ -117,7 +118,7 @@ model: inherit
 
 1. インプット (テスト設計3ドキュメント) を Read。
 2. アウトプット (テストコード + status.json) を Read。
-3. **test-run の結果レポート** (`docs/04_test_results/<FID>/test-implementation-red-confirmation.md`) を Read して Section B (Red 確認) を判定。**テスト実行は本スキルではしない** (test-run の責務)。
+3. **testing (mode=red) の結果レポート** (`docs/04_test_results/<FID>/test-implementation-red-confirmation.md`) を Read して Section B (Red 確認) を判定。**テスト実行は本スキルではしない** (testing の責務)。
 4. auto-check の結果レポートを Read し SHOULD warning / MAY info / skipped_missing_tools を確認 (機械チェック済みの観点は再判定しない)。
 5. テスト設計の各テスト ID とテストコードの 1:1 対応を確認。
 6. AAA パターン / 1 テスト 1 観点 / assert の明瞭さなど、テストコード品質を評価。

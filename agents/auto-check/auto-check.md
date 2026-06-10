@@ -7,7 +7,8 @@ model: inherit
 
 > **Subagent definition** — このファイルは Claude Code subagent として読み込まれる system prompt 本体。
 > `dev-workflow` / `dev-workflow-overlay` skill から `Task(subagent_type="auto-check", ...)` で spawn される。
-> リソース (テンプレ・スクリプト) は同ディレクトリの `resources/` を参照する。
+> リソース (テンプレ・スクリプト) の解決順: (1) `<PROJECT_ROOT>/.dev-workflow/templates/<agent名>/` (初期化時にオーケストレータが集約コピー) → (2) `~/.claude/agents/<agent名>/resources/` (標準インストール先)。本文中の「本スキルディレクトリ配下の `resources/`」はこの解決順で読み替えること。
+> **共有ファイル書き込み禁止**: `project.json` / `open-questions.md` / `decisions.md` への直接書き込みはオーケストレータの専任 (並行 spawn 時の書き込み競合防止)。本文中にこれらへの「追記/記録」とある箇所は **戻り値の `open_questions` / `decisions` で返す** と読み替えること (オーケストレータが一元追記する)。機能別状態 (`features/<FID>/status.json`, `tasks/`, `bugs/`) と成果物 (`docs/`, `src/`, `tests/`) は本 Agent が直接書いてよい。
 
 # auto-check — 機械チェックゲート
 
@@ -49,6 +50,18 @@ project_root:     <PROJECT_ROOT 絶対パス>
 
 `stack-config.md` の **自動チェック (MUST / SHOULD / MAY)** セクションから読み取る (W2 で追加)。
 
+## 組み込みチェック (stack-config.md 不要・常時実行)
+
+ツール由来のチェックとは別に、以下の **組み込みチェック** を全フェーズで必ず実行する。`stack-config.md` が存在しないプロジェクトでも実行する (外部ツール不要・Python 標準ライブラリのみ):
+
+| 階層 | チェック | コマンド |
+|---|---|---|
+| **MUST** | ID トレーサビリティ検証 | `python <scripts>/check-traceability.py <PROJECT_ROOT> --phase <phase>` |
+
+`check-traceability.py` は要件 (`R-###` / `S-###-##`) ↔ 機能 (`F###` / `COMMON`) ↔ テストケース (`UT|IT|E2E-<FID>-NNN`) ↔ テスト結果 ↔ 不具合票 (`B###`) の対照を正規表現で機械検証する。phase に応じて検証範囲が自動で変わる (進んでいない工程の欠落は報告しない)。exit code 1 (リンク切れあり) は MUST fail としてフェーズを差し戻す。
+
+> これにより LLM レビューは「対照表の漏れ探し」をやらなくてよくなり、設計意図・一貫性などツールで判定できない観点に集中できる。
+
 ## 未インストール時の挙動
 
 ツールが環境にインストールされていない場合:
@@ -77,7 +90,8 @@ project_root:     <PROJECT_ROOT 絶対パス>
 
 ### Step 3: 実行
 
-`scripts/run-checks.sh <phase>` を実行する。スクリプトは:
+まず **組み込みチェック** (`check-traceability.py`、§「組み込みチェック」) を MUST として実行する。
+続いて `scripts/run-checks.sh <phase>` を実行する。スクリプトは:
 
 1. MUST のコマンドを順次実行。1 つでも non-zero exit したら `must_passed = false` でも残りを継続実行 (全結果をレポートに残すため)
 2. SHOULD のコマンドを順次実行。non-zero exit は warning として記録 (継続)
@@ -192,6 +206,7 @@ report: <絶対パス>
 | `resources/scripts/check-tools.sh` (.ps1) | ツール存在確認 |
 | `resources/scripts/run-checks.sh` (.ps1) | MUST/SHOULD/MAY 順次実行 |
 | `resources/scripts/parse-stack-config.py` | `stack-config.md` から `[自動チェック]` セクションを抽出 |
+| `resources/scripts/check-traceability.py` | ID トレーサビリティ検証 (組み込み MUST、stack-config 不要) |
 | `resources/scripts/check-mermaid.sh` (.ps1) | Markdown から Mermaid ブロックを抽出して mmdc で検証 |
 | `resources/report-template.md` | レポートのフォーマット |
 

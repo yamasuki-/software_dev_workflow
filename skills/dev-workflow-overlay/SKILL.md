@@ -48,6 +48,7 @@ flowchart TD
 | ファイル                       | 役割                                                                 |
 | ------------------------------ | -------------------------------------------------------------------- |
 | `stack-config.md`              | スタック全体共通ルール (言語/FW/規約・テスト基盤・CIなど)              |
+| `requirements.md`              | requirements フェーズへのスタック由来ルール                           |
 | `basic-design.md`              | basic-design フェーズへのスタック由来ルール                           |
 | `detailed-design.md`           | detailed-design フェーズへのスタック由来ルール                        |
 | `test-design.md`               | test-design フェーズへのスタック由来ルール                            |
@@ -177,16 +178,16 @@ artifact_path: <相対パス (任意)>
 description: <1行説明 (任意)>
 ```
 
-例:
+例 (セキュリティレビューは現在ベース正式 Agent のため、ここでは別観点の追加例):
 
 ```
-## PHASE: security-review
-position: after implementation_review
-skill: security-review
+## PHASE: a11y-review
+position: after security_review
+skill: a11y-review
 project_local: yes
 gating: blocks_next_phase_on_fail
-artifact_path: docs/07_security/<FID>/
-description: 実装後にセキュリティ観点の追加レビューを行う
+artifact_path: docs/08_a11y/<FID>/
+description: 実装後にアクセシビリティ観点の追加レビューを行う
 ```
 
 #### 解釈ルール
@@ -231,7 +232,7 @@ auto-check spawn のブリーフ末尾に以下を追記:
 
 本スキルは以下を **絶対に変更しない**:
 
-- インストール済みのベース Skill (`~/.claude/skills/dev-workflow/`) と Agent 群 (`~/.claude/agents/basic-design/`, `~/.claude/agents/implementation/`, ... の 16 個)、ただし `dev-workflow-overlay` 自身を除く
+- インストール済みのベース Skill (`~/.claude/skills/dev-workflow/`) と Agent 群 (`~/.claude/agents/requirements/`, `~/.claude/agents/basic-design/`, `~/.claude/agents/implementation/`, ... の 20 個)、ただし `dev-workflow-overlay` 自身を除く
 - ベース側のテンプレート群 (本スキルセットがインストール元の git リポジトリ等にある場合、そこも触らない)
 
 書き込みはすべて `<PROJECT_ROOT>/` 配下に限定する。

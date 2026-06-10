@@ -15,12 +15,24 @@
   "requirements": {
     "source_type": "file",
     "source_path": "docs/requirements/requirements.md",
+    "format": "free",
+    "status": "pending",
+    "auto_check": null,
+    "review": null,
     "summary": ""
   },
   "features": [],
   "open_questions_path": ".dev-workflow/open-questions.md",
   "decisions_log_path": ".dev-workflow/decisions.md",
   "checkpoints": {
+    "requirements": {
+      "status": "pending",
+      "enabled": true,
+      "approved_at": null,
+      "skipped_at": null,
+      "approval_notes": null,
+      "history": []
+    },
     "basic_design": {
       "status": "pending",
       "enabled": true,
