@@ -41,9 +41,10 @@ flowchart TD
       Orch -->|spawn 1回 per layer| TR[unit/integration/e2e-test-review 全機能横断]
     end
 
-    Orch -->|per bug| Bug[bug-fix]
+    Orch -->|per iteration| BI[bug-investigation 調査専門 修正禁止]
+    Orch -->|per bug| Bug[bug-fix Step2から]
     Orch -->|per iteration| BFR[bug-fix-review]
-    REQ & REQR & BD & BDR & DD & DDR & TD & TDR & TI & TIR & Impl & IR & SR & Test & TR & Bug & BFR <-->|read write| State[(.dev-workflow docs src tests)]
+    REQ & REQR & BD & BDR & DD & DDR & TD & TDR & TI & TIR & Impl & IR & SR & Test & TR & BI & Bug & BFR <-->|read write| State[(.dev-workflow docs src tests)]
     Orch <-->|read only| State
 ```
 
@@ -150,20 +151,21 @@ USDM 差分要求書を受け取った場合は、ファイルを Read で読み
 | 全機能 `layers.unit` 実行済み、`auto_check.testing.unit.per_feature` 未実行                            | **`auto-check`** (phase=testing, mode=per_feature, layer=unit) 機能ごと並行 |
 | `auto_check` MUST pass、`unit-test-review (mode=per_feature)` 未実行                                    | **`unit-test-review` (mode=per_feature)** 機能ごと並行           |
 | 全機能 `review.per_feature` pass、`unit-test-review (mode=cross)` 未実行                                | **`unit-test-review` (mode=cross)** 1 回                         |
-| **`layers.unit.open_bugs` が非空** (review pass 後)                                                    | `bug-fix` (バグごと) → 完了後に **`testing` (layer=unit, mode=retry)** を再 spawn (リグレッション含む全実行) |
+| **`layers.unit.open_bugs` が非空** (review pass 後)                                                    | `bug-investigation` (調査) → `bug-fix` (修正、バグごと) → 完了後に **`testing` (layer=unit, mode=retry)** を再 spawn (リグレッション含む全実行) |
 | 全機能 `layers.unit.open_bugs = []` かつ `layers.unit.status = completed`                              | **[Layer 2: 結合]** へ進む (下記)                                |
 | **[Layer 2: 結合]** 全機能 `layers.integration.status` が `pending`                                    | **`testing` (layer=integration)** 機能ごと並行 spawn             |
 | 全機能 `layers.integration` 実行済み、`auto_check.testing.integration.per_feature` 未実行              | **`auto-check`** (phase=testing, mode=per_feature, layer=integration) 機能ごと並行 |
 | `auto_check` MUST pass、`integration-test-review (mode=per_feature)` 未実行                            | **`integration-test-review` (mode=per_feature)** 機能ごと並行    |
 | 全機能 `review.per_feature` pass、`integration-test-review (mode=cross)` 未実行                        | **`integration-test-review` (mode=cross)** 1 回                  |
-| **`layers.integration.open_bugs` が非空** (review pass 後)                                             | `bug-fix` (バグごと) → 完了後に **`testing` (layer=integration, mode=retry)** を再 spawn |
+| **`layers.integration.open_bugs` が非空** (review pass 後)                                             | `bug-investigation` (調査) → `bug-fix` (修正、バグごと) → 完了後に **`testing` (layer=integration, mode=retry)** を再 spawn |
 | 全機能 `layers.integration.open_bugs = []` かつ `layers.integration.status = completed`                | **[Layer 3: E2E]** へ進む                                        |
 | **[Layer 3: E2E]** 全機能 `layers.e2e.status` が `pending`                                             | **`testing` (layer=e2e)** 機能ごと並行 spawn                     |
 | 全機能 `layers.e2e` 実行済み、`auto_check.testing.e2e.per_feature` 未実行                              | **`auto-check`** (phase=testing, mode=per_feature, layer=e2e) 機能ごと並行 |
 | `auto_check` MUST pass、`e2e-test-review (mode=per_feature)` 未実行                                    | **`e2e-test-review` (mode=per_feature)** 機能ごと並行            |
 | 全機能 `review.per_feature` pass、`e2e-test-review (mode=cross)` 未実行                                | **`e2e-test-review` (mode=cross)** 1 回                          |
-| **`layers.e2e.open_bugs` が非空** (review pass 後)                                                     | `bug-fix` (バグごと) → 完了後に **`testing` (layer=e2e, mode=retry)** を再 spawn |
+| **`layers.e2e.open_bugs` が非空** (review pass 後)                                                     | `bug-investigation` (調査) → `bug-fix` (修正、バグごと) → 完了後に **`testing` (layer=e2e, mode=retry)** を再 spawn |
 | 全 3 layer の `status = completed` かつ全 `open_bugs = []`                                              | `phases.testing.status = completed`、次フェーズ / プロジェクト完了 |
+| bug への着手時 / 新しい反復の開始時                                                                     | **`bug-investigation`** (BID + iteration を渡す、修正禁止の調査専門)。完了後に `bug-fix` を Step 2 から spawn |
 | `bug-fix` の各反復完了直後                                                                              | **`bug-fix-review`** (auto-check は不要、bug-fix は対象範囲が小さく LLM 判定中心) |
 | 全機能・全バグが終了                                                                                    | (なし。最終レポート提示)                                         |
 
@@ -189,7 +191,7 @@ testing layer=unit         → unit-test-review          (層完了確認)
 testing layer=integration  → integration-test-review   (層完了確認)
 testing layer=e2e          → e2e-test-review           (層完了確認)
   ↓
-bug-fix (バグごと反復) → bug-fix-review (反復ごと)
+bug-investigation (調査) → bug-fix (バグごと反復) → bug-fix-review (反復ごと)
 ```
 
 **バッチモデルの利点:**
@@ -251,7 +253,7 @@ commit はオーケストレータがゲート通過時に行う。
 ```
 
 `subagent_type` に渡す値は agents/ 配下の `name` (frontmatter):
-- `requirements`, `basic-design`, `detailed-design`, `test-design`, `test-implementation`, `implementation`, `testing`, `bug-fix`
+- `requirements`, `basic-design`, `detailed-design`, `test-design`, `test-implementation`, `implementation`, `testing`, `bug-investigation`, `bug-fix`
 - `requirements-review`, `basic-design-review`, `detailed-design-review`, `test-design-review`, `test-implementation-review`, `implementation-review`, `security-review`, `unit-test-review`, `integration-test-review`, `e2e-test-review`, `bug-fix-review`
 - `auto-check`
 
@@ -632,7 +634,7 @@ flowchart TD
     AC --> AR[L-test-review per_feature → cross]
     AR --> BugCheck{open_bugs = []?}
     BugCheck -->|yes| Done[layer=L status=completed → 次層へ]
-    BugCheck -->|no| BF[bug-fix bug ごと反復]
+    BugCheck -->|no| BF[bug-investigation → bug-fix bug ごと反復]
     BF --> BFR[bug-fix-review]
     BFR -->|pass_and_verified| Retest[testing layer=L mode=retry リグレッション込み]
     BFR -->|pass_but_open| BF

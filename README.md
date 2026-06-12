@@ -14,10 +14,10 @@
 - **推測しない**: 不明点はユーザに確認する。重要度が高ければ即時、軽微なものはフェーズ末でまとめて (ハイブリッド方針)。
 - **Mermaid を用いた図表**: 状態遷移、ER図、シーケンス図は Mermaid で記述。
 
-## 構成 (Skill 2 個 + Agent 20 個)
+## 構成 (Skill 2 個 + Agent 21 個)
 
 `dev-workflow` / `dev-workflow-overlay` は **ユーザが呼ぶ Skill** (`~/.claude/skills/`)。
-残り 20 個は **サブエージェント** として `Task(subagent_type="<name>")` で spawn される Agent (`~/.claude/agents/<name>/<name>.md`)。
+残り 21 個は **サブエージェント** として `Task(subagent_type="<name>")` で spawn される Agent (`~/.claude/agents/<name>/<name>.md`)。
 
 ### Skill (2 個)
 
@@ -26,7 +26,7 @@
 | `dev-workflow`                 | オーケストレータ。プロジェクト全体の進行を統括 (ユーザとの長期対話、進捗判断、Agent spawn) |
 | `dev-workflow-overlay`         | `dev-workflow` のラッパー。プロジェクト直下 `.dev-workflow/rules/` のプロジェクト固有ルール (必須) と `extra-phases.md` の追加フェーズを反映してベースを実行する。Agent 本体の完全上書きも `<PROJECT_ROOT>/.claude/agents/<name>.md` で可能 (Advanced) |
 
-### Agent (20 個)
+### Agent (21 個)
 
 | Agent                          | 役割                                                  |
 | ------------------------------ | ----------------------------------------------------- |
@@ -47,11 +47,12 @@
 | `unit-test-review`             | 単体テスト結果レビュー。検証対象 = **詳細設計**。詳細設計 5 ドキュメント (functional / state / sequence / UI / DB) の全要素カバー、AAA / 1 テスト 1 観点 / モック適切性 / 分岐網羅率を判定 |
 | `integration-test-review`      | 結合テスト結果レビュー。検証対象 = **基本設計**。アーキ I/F / 機能間連携 / データフロー / コンポーネント境界の網羅、実 DB / 実外部システム使用、N+1 / トランザクション境界を判定 |
 | `e2e-test-review`              | E2E テスト結果レビュー。検証対象 = **要件定義書**。要件 (USDM `R-###` / ユースケース) の **100% カバー** を必須、受入条件転記、業務シナリオ、手動 E2E 再現性を判定 |
-| `bug-fix`                      | 不具合修正 (原因調査→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ) |
+| `bug-investigation`            | **原因調査専門 (修正は一切しない)**。再現→観測 (エビデンス必須)→Root Cause 特定 (ファイル:行番号)→分類推奨。修正手段を持たないことで「自分が直せる仮説」への収束 (動機バイアス) を構造的に防ぐ。各反復の冒頭に spawn。一時計装は原状復帰 (git diff 空) 条件付きで許可。testing Fail のトリアージにも使える |
+| `bug-fix`                      | 不具合修正 (原因調査は `bug-investigation` の独立レポートを引き継ぎ Step 2 から→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ) |
 | `bug-fix-review`               | 反復ごとに 5ステップの規律違反を検証                  |
 | `auto-check`                   | 機械チェックゲート。`stack-config.md` 由来の MUST/SHOULD/MAY ツール (linter / typecheck / markdownlint / カバレッジ等) を実行。MUST 失敗でフェーズ差し戻し |
 
-通常は `dev-workflow` (Skill) を起動する。`dev-workflow` が状況を判断して上記 20 個の Agent を **`Task(subagent_type="<name>")` で spawn** する。
+通常は `dev-workflow` (Skill) を起動する。`dev-workflow` が状況を判断して上記 21 個の Agent を **`Task(subagent_type="<name>")` で spawn** する。
 ユーザが特定の Agent を直接呼びたい場合 (例: 既存プロジェクトの途中から `implementation` だけ使いたい) は、Claude に「implementation Agent を spawn して」と頼めば `Task(subagent_type="implementation")` が呼ばれる。
 
 ### 人間チェックポイント (human-checkpoint)
@@ -163,6 +164,7 @@ $REPO_ROOT/
    ├─ unit-test-review/{unit-test-review.md, resources/}
    ├─ integration-test-review/{integration-test-review.md, resources/}
    ├─ e2e-test-review/{e2e-test-review.md, resources/}
+   ├─ bug-investigation/{bug-investigation.md, resources/}
    ├─ bug-fix/{...}
    ├─ bug-fix-review/{...}
    └─ auto-check/{auto-check.md, resources/{scripts/, report-template.md}}
@@ -178,7 +180,7 @@ cp -R agents/*  ~/.claude/agents/
 - `skills/` の中身はユーザが呼ぶ「ワークフローの入口」 (Skill カタログに自動 load される)
 - `agents/` の中身は `Task(subagent_type="<name>")` で spawn される「単一責務のサブエージェント」 (Agent カタログに自動 load される)
 
-> 旧バージョンとの互換性メモ: 旧構成では 18 個すべてが `skills/` 配下にあったが、Skill (2) と Agent (16) に分離した (その後 `security-review` / `requirements` / `requirements-review` を追加、`test-run` を `testing` に統合し、現在 Agent は 20)。古い `skills/<phase>/` 等が残っている場合は手動で削除して `~/.claude/agents/` 側に揃えること。
+> 旧バージョンとの互換性メモ: 旧構成では 18 個すべてが `skills/` 配下にあったが、Skill (2) と Agent (16) に分離した (その後 `security-review` / `requirements` / `requirements-review` を追加、`test-run` を `testing` に統合、`bug-investigation` を追加し、現在 Agent は 21)。古い `skills/<phase>/` 等が残っている場合は手動で削除して `~/.claude/agents/` 側に揃えること。
 
 ## 新規プロジェクトでの使い方
 
@@ -198,7 +200,7 @@ PowerShell 例 (Windows):
 # このリポジトリのクローン先 (環境に合わせて書き換え)
 $RepoRoot = "$env:USERPROFILE\github\claudecode_settings"
 
-# Skill (2 個) と Agent (20 個) をユーザグローバルに設置
+# Skill (2 個) と Agent (21 個) をユーザグローバルに設置
 $ClaudeSkills = "$env:USERPROFILE\.claude\skills"
 $ClaudeAgents = "$env:USERPROFILE\.claude\agents"
 New-Item -ItemType Directory -Force -Path $ClaudeSkills | Out-Null
@@ -213,7 +215,7 @@ bash / macOS / Linux 例:
 # このリポジトリのクローン先 (環境に合わせて書き換え)
 REPO_ROOT="$HOME/dev/claudecode_settings"
 
-# Skill (2 個) と Agent (20 個) をユーザグローバルに設置
+# Skill (2 個) と Agent (21 個) をユーザグローバルに設置
 mkdir -p ~/.claude/skills ~/.claude/agents
 cp -R "$REPO_ROOT/skills/"* ~/.claude/skills/
 cp -R "$REPO_ROOT/agents/"* ~/.claude/agents/

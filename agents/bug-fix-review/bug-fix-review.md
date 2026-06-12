@@ -44,13 +44,14 @@ model: inherit
 
 ## チェックリスト (5ステップごと)
 
-### Step 1: 原因調査 (Investigation)
+### Step 1: 原因調査 (Investigation) — bug-investigation による独立調査
+- [ ] **調査が `bug-investigation` Agent によって行われている** (調査レポート `docs/05_bug_reports/<BID>-investigation-<N>.md` が存在し、bug-fix が自前で調査していない)
 - [ ] `is_speculation = false` になっている
 - [ ] `evidence[]` に **観察によって得られた生のテキスト** (ログ・スタックトレース・変数値など) が記録されている
 - [ ] `method` (log_injection / debugger / trace / query_log 等) が明示されている
-- [ ] `debug_artifacts[]` が記録されている
 - [ ] Root Cause が **ファイル:行番号レベル** で特定されている
 - [ ] **推測だけで原因断定** していない
+- [ ] 調査の一時計装が原状復帰されている (調査レポートの「原状復帰の確認」セクション)
 
 ### Step 2: 影響範囲の判定とハンドオフ (Impact Assessment & Handoff)
 - [ ] **bug-fix サブエージェントが設計ドキュメントを直接編集していない** (規律違反: NG)
@@ -81,8 +82,9 @@ model: inherit
 
 ### Step 4: コード修正 (Code Fix)
 - [ ] `changed_files[]` に変更ファイルが列挙されている
-- [ ] Step 1 で投入したデバッグログ等が `changed_files` に **混入していない** (除去済み)
+- [ ] デバッグログ等の一時計装が `changed_files` に **混入していない** (除去済み)
 - [ ] 設計修正 (Step 2) と整合した修正になっている (設計外の変更が無い)
+- [ ] **修正内容が bug-investigation の Root Cause と整合している** (独立調査と別の原因を前提にした修正は NG。別原因が正しいと思うなら再調査を経ること)
 
 ### Step 5: テスト実施 (Verification)
 - [ ] `executed_test_ids[]` に以下4種すべてが含まれる:
@@ -116,7 +118,7 @@ model: inherit
 
 ## fail 時の戻し方針
 
-- Step 1 違反 (推測のみ) → `bug-fix` Step 1 から再実施 (デバッグエビデンス追加)
+- Step 1 違反 (推測のみ / 独立調査なし) → **`bug-investigation` を再 spawn** (オーケストレータに要請)。bug-fix に調査をさせない
 - Step 2 違反 (設計修正の判断不備) → `bug-fix` Step 2 再実施
 - Step 3 違反 (TDD Red 未確認 / テストコード追加なし) → `bug-fix` Step 3 から再実施
 - Step 4 違反 (デバッグコード混入) → `bug-fix` Step 4 再実施

@@ -1,6 +1,6 @@
 ---
 name: bug-fix
-description: テストで検出された不具合の修正を「原因調査(エビデンス必須)→設計修正→前工程テスト設計修正(TDD)→コード修正→テスト実施」の5ステップ反復ループで進める。Fail が残ったら次の反復でやり直す。`dev-workflow` から `current_phase = bug_fix` のときに呼ばれる、または「B<番号> を直して」「不具合修正フェーズを進めて」と言われた時に使用する。
+description: テストで検出された不具合の修正を「原因調査(bug-investigation Agent が独立実施)→影響範囲判定→前工程テスト設計修正(TDD)→コード修正→テスト実施」の5ステップ反復ループで進める。Step 1 (原因調査) は調査専門の `bug-investigation` Agent の責務であり、本 Agent はその調査レポートを引き継いで Step 2 から開始する。Fail が残ったら次の反復でやり直す。`dev-workflow` から `current_phase = bug_fix` のときに呼ばれる、または「B<番号> を直して」「不具合修正フェーズを進めて」と言われた時に使用する。
 tools: Read, Write, Edit, Bash, Grep, Glob, TodoWrite, WebFetch, WebSearch
 model: inherit
 ---
@@ -31,7 +31,7 @@ model: inherit
 ```mermaid
 flowchart TD
     Start([不具合 open]) --> S1
-    S1[1 原因調査 エビデンス必須 推測禁止] --> S2
+    S1[1 原因調査<br/>bug-investigation Agent が独立実施<br/>エビデンス必須 推測禁止] --> S2
     S2[2 影響範囲の判定とハンドオフ<br/>分類のみ 設計編集はしない]
     S2 -->|code_bug_only| S3
     S2 -->|design_error_detailed| HOdetailed[detailed-design 差し戻し → 2段レビュー]
@@ -84,43 +84,23 @@ flowchart TD
 
 ---
 
-### Step 1 : 原因調査 (Investigation) — **推測禁止 / エビデンス必須**
+### Step 1 : 原因調査 (Investigation) — **`bug-investigation` Agent の責務 (本 Agent はやらない)**
 
-**絶対にやらないこと:**
-- ログを見ずに「たぶんここが原因」と決めつける
-- スタックトレースの最後の行だけ見て直す
-- 1回の再現で原因を断定する (タイミング/データ依存の見落としを防ぐ)
+原因調査は調査専門の **`bug-investigation` Agent** (修正手段を持たない) が独立して実施する。修正する者が調査すると「自分が直せる仮説」に観察が引き寄せられるため、調査と修正を分離している。
 
-**必ずやること:**
-1. **再現** を行う。最低1回は実環境/テスト環境で再現させる。
-   - 再現できない場合は「再現条件の絞り込み」を行う (環境差・データ依存・並行性・タイミング)
-   - それでも再現しない時は **絶対に「再現不可」でクローズしない**。`open-questions.md` に追記しユーザに確認。
-2. **デバッグの仕掛け** を入れる (最低1つは実施):
-   - 関連箇所にログ出力を追加 (`print` / `logger.debug` / `console.log` 等)
-   - デバッガでブレークポイントを置いて変数を観察
-   - スタックトレース全体を取得
-   - DB クエリログ / HTTP リクエスト/レスポンスをキャプチャ
-   - テストランナーの詳細出力を取得
-3. **観察結果を採取** する。実際のログ出力・変数値・スタックトレースを bug.json の `iterations[i].sub_phases.investigation.evidence[]` と bug-report.md の「観察結果」セクションに **生のテキストで** 残す。
-4. **Root Cause を特定** する。観察結果から導かれる原因をファイル名:行番号レベルで指定。
-5. **検証**: `is_speculation = false` にできるか自問する。「これは推測ではなく観察に基づく」と言い切れること。言い切れないなら追加調査。
+**本 Agent (bug-fix) がやること:**
+1. `bug.json` の `iterations[i].sub_phases.investigation` と調査レポート (`docs/05_bug_reports/<BID>-investigation-<N>.md`) を Read する
+2. 以下が揃っていることを確認:
+   - `status = "completed"` / `is_speculation = false`
+   - Root Cause が **ファイル:行番号レベル** で特定されている
+   - `evidence[]` に観察による生テキストが残っている
+   - `suggested_classification` と理由がある
+3. **揃っていない / 調査レポートが存在しない場合**: 自分で調査せず、`blockers` で「bug-investigation (BID=<B###>, iteration=<N>) の spawn が必要」とオーケストレータに返して終了する
+4. 調査内容に疑義がある場合 (Root Cause とコードの実態が合わない等) も同様に、疑義を明記して再調査を要請する (自分で調査をやり直さない)
 
-**デバッグコードの後始末:**
-- 一時的に追加したデバッグログ等は、コード修正フェーズが終わるまでは残してよいが、最終的なコミットには含めないこと。
-- 「観測のためにここを変えた」場所は `code_fix` の `changed_files` から除外しておく。
+**絶対にやらないこと**: 調査レポートなしで Step 2 以降に進む / 自分で原因調査をやり直す / レポートの Root Cause を無視して別の原因を前提に修正する (別原因だと思うなら再調査要請)。
 
-`bug.json` 更新:
-```
-iterations[i].sub_phases.investigation:
-  status = "completed"
-  method = "log_injection | debugger | trace | query_log | ..."
-  debug_artifacts = ["<追加したログのスニペットや出力ファイルパス>"]
-  evidence = ["<観察結果テキスト>"]
-  root_cause = "<観察に基づく原因>"
-  is_speculation = false
-```
-
-bug-report.md の「1. 原因調査」セクションも同じ内容を埋める。
+bug-report.md の「1. 原因調査」セクションには調査レポートへの参照 (パスと結論の要約) を記入する。
 
 ---
 
@@ -293,8 +273,8 @@ bug-fix-review の判定に従い:
 
 - **`pass_but_open_iteration`** (規律 OK だが `fail_count > 0`):
   - `bug.json` の `status` は `investigating` のまま
-  - **次の反復を開始**: `iterations[]` に新エントリを追加し Step 1 へ
-  - 反復 #2 以降の Step 1 (原因調査) では、**前反復の修正後に何が変わって/変わらず Fail しているか** を必ず観察すること
+  - **次の反復を開始**: `iterations[]` に新エントリを追加し、戻り値で **「bug-investigation (iteration N+1) の spawn が必要」** とオーケストレータに要請して終了 (調査は本 Agent がやらない)
+  - 反復 #2 以降の調査ブリーフには「前反復の修正後に何が変わって/変わらず Fail しているか」の観察を含めるようオーケストレータに伝える
 
 - **`fail`** (規律違反あり):
   - 該当ステップに戻して同反復内で再実施
@@ -315,7 +295,7 @@ bug-fix-review の判定に従い:
 
 ## チェックリスト (不具合の verified 判定)
 
-- [ ] 原因調査は **観察エビデンスに基づく** (推測ではない)
+- [ ] 原因調査は **bug-investigation Agent の独立調査レポート** に基づく (本 Agent が自前で調査していない / 推測ではない)
 - [ ] **Step 2 で bug-fix が設計を直接編集していない** (規律)
 - [ ] 分類 (`classification`) が記録され、必要な場合は設計フェーズに差し戻されている
 - [ ] 差し戻した場合: 該当設計フェーズの **per_feature レビュー + cross レビュー両方** を pass している (`design_review_per_feature_passed && design_review_cross_passed`)

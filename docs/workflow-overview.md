@@ -1,6 +1,6 @@
 # ワークフロー全体像
 
-## エージェント構成 (Skill 2 個 + Agent 20 個)
+## エージェント構成 (Skill 2 個 + Agent 21 個)
 
 ユーザは Skill `dev-workflow` (または `dev-workflow-overlay`) を起動する。Skill が「メイン Claude」として動き、各フェーズの作業を Agent (`~/.claude/agents/<name>/<name>.md`) に `Task(subagent_type="<name>")` で委譲する。
 
@@ -16,6 +16,7 @@ flowchart TD
     Orch -. spawn .-> AC["auto-check Agent<br/>機械チェック"]
     Orch -. spawn .-> ImpA["implementation Agent<br/>TDD Green"]
     Orch -. spawn .-> TstA["testing Agent"]
+    Orch -. spawn .-> BIA["bug-investigation Agent<br/>調査専門・修正禁止"]
     Orch -. spawn .-> BugA["bug-fix Agent"]
     Orch -. spawn .-> RevA["*-review Agents (9)<br/>requirements-review / security-review 含む"]
     RQA & BDA & DDA & TDA & TIA & TR & AC & ImpA & TstA & BugA & RevA <-->|"read/write"| FS[(".dev-workflow/<br/>docs/<br/>src/<br/>tests/")]
@@ -209,7 +210,7 @@ flowchart LR
 
 ## bug-fix の5ステップ反復ループ (設計差し戻し型)
 
-**bug-fix は設計を直接編集しない**。設計変更が必要な場合は該当設計フェーズ (`basic-design` / `detailed-design`) に差し戻し、そこの 2 段レビュー (per_feature + cross) を通って初めて設計が確定。bug-fix は調整役。
+**原因調査は `bug-investigation` Agent (修正禁止の調査専門) が独立実施** し、bug-fix は調査レポートを引き継いで Step 2 (影響範囲判定) から始める。修正者が調査すると「自分が直せる仮説」に観察が引き寄せられるため分離している。**bug-fix は設計を直接編集しない**。設計変更が必要な場合は該当設計フェーズ (`basic-design` / `detailed-design`) に差し戻し、そこの 2 段レビュー (per_feature + cross) を通って初めて設計が確定。bug-fix は調整役。
 
 ```mermaid
 flowchart TD
