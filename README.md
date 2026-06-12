@@ -14,19 +14,21 @@
 - **推測しない**: 不明点はユーザに確認する。重要度が高ければ即時、軽微なものはフェーズ末でまとめて (ハイブリッド方針)。
 - **Mermaid を用いた図表**: 状態遷移、ER図、シーケンス図は Mermaid で記述。
 
-## 構成 (Skill 2 個 + Agent 21 個)
+## 構成 (Skill 4 個 + Agent 23 個)
 
-`dev-workflow` / `dev-workflow-overlay` は **ユーザが呼ぶ Skill** (`~/.claude/skills/`)。
-残り 21 個は **サブエージェント** として `Task(subagent_type="<name>")` で spawn される Agent (`~/.claude/agents/<name>/<name>.md`)。
+`dev-workflow` / `dev-workflow-overlay` / `bugfix-workflow` / `feature-add-workflow` は **ユーザが呼ぶ Skill** (`~/.claude/skills/`)。
+残り 23 個は **サブエージェント** として `Task(subagent_type="<name>")` で spawn される Agent (`~/.claude/agents/<name>/<name>.md`)。
 
-### Skill (2 個)
+### Skill (4 個)
 
 | Skill                          | 役割                                                  |
 | ------------------------------ | ----------------------------------------------------- |
 | `dev-workflow`                 | オーケストレータ。プロジェクト全体の進行を統括 (ユーザとの長期対話、進捗判断、Agent spawn) |
 | `dev-workflow-overlay`         | `dev-workflow` のラッパー。プロジェクト直下 `.dev-workflow/rules/` のプロジェクト固有ルール (必須) と `extra-phases.md` の追加フェーズを反映してベースを実行する。Agent 本体の完全上書きも `<PROJECT_ROOT>/.claude/agents/<name>.md` で可能 (Advanced) |
+| `bugfix-workflow`              | **不具合修正の軽量ワークフロー** (TDD)。インプット = 不具合内容・再現手順・再現率。原因解析 (`bug-investigation`、推測禁止・条件不明はユーザに問合せ) → 対応方法提案 (`solution-proposal`、ユーザ選定) → 設計修正 (差分明示、既存設計なければ逆引き作成) → 🛑 ユーザ承認 → TDD 実装・テスト (`bug-fix` Step3〜 + review)。ベース dev-workflow の規約 (Git 統合・ゲート・所有権) を継承 |
+| `feature-add-workflow`         | **機能追加の軽量ワークフロー** (TDD)。インプット = 現行の動作・機能の変更点。現行解析 (`current-analysis`) → 対応方法提案 (`solution-proposal`、ユーザ選定) → 設計修正 (差分明示、既存設計なければ逆引き作成) → 🛑 ユーザ承認 → TDD 実装・テスト (test-design → Red → Green → 層テスト + 各 review)。1 FID 単位。ベース規約を継承 |
 
-### Agent (21 個)
+### Agent (23 個)
 
 | Agent                          | 役割                                                  |
 | ------------------------------ | ----------------------------------------------------- |
@@ -50,9 +52,11 @@
 | `bug-investigation`            | **原因調査専門 (修正は一切しない)**。再現→観測 (エビデンス必須)→Root Cause 特定 (ファイル:行番号)→分類推奨。修正手段を持たないことで「自分が直せる仮説」への収束 (動機バイアス) を構造的に防ぐ。各反復の冒頭に spawn。一時計装は原状復帰 (git diff 空) 条件付きで許可。testing Fail のトリアージにも使える |
 | `bug-fix`                      | 不具合修正 (原因調査は `bug-investigation` の独立レポートを引き継ぎ Step 2 から→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ) |
 | `bug-fix-review`               | 反復ごとに 5ステップの規律違反を検証                  |
+| `current-analysis`             | **現行解析専門 (修正は一切しない)**。機能追加・改修の前提となる現行動作・関連モジュール・既存設計/テストの有無マップ・影響範囲候補を調査。ユーザ説明とコード実態の食い違いを検出。feature-add-workflow の Step 2-1 で使用 |
+| `solution-proposal`            | **対応方法提案専門 (修正は一切しない)**。調査/解析レポートに基づき 2〜4 案 (最小修正案を必ず含む) を影響範囲・工数・リスクのトレードオフ付きで比較し推奨案を返す。**選定はユーザ**。bugfix-workflow / feature-add-workflow で共用 |
 | `auto-check`                   | 機械チェックゲート。`stack-config.md` 由来の MUST/SHOULD/MAY ツール (linter / typecheck / markdownlint / カバレッジ等) を実行。MUST 失敗でフェーズ差し戻し |
 
-通常は `dev-workflow` (Skill) を起動する。`dev-workflow` が状況を判断して上記 21 個の Agent を **`Task(subagent_type="<name>")` で spawn** する。
+通常は `dev-workflow` (Skill) を起動する。`dev-workflow` が状況を判断して上記 23 個の Agent を **`Task(subagent_type="<name>")` で spawn** する。
 ユーザが特定の Agent を直接呼びたい場合 (例: 既存プロジェクトの途中から `implementation` だけ使いたい) は、Claude に「implementation Agent を spawn して」と頼めば `Task(subagent_type="implementation")` が呼ばれる。
 
 ### 人間チェックポイント (human-checkpoint)
@@ -130,6 +134,8 @@ $REPO_ROOT/
 │  │  ├─ SKILL.md
 │  │  └─ resources/
 │  │     └─ progress/{project.json, open-questions.md, decisions.md}
+│  ├─ bugfix-workflow/{SKILL.md}                # 不具合修正の軽量ワークフロー (TDD)
+│  ├─ feature-add-workflow/{SKILL.md}           # 機能追加の軽量ワークフロー (TDD)
 │  └─ dev-workflow-overlay/
 │     ├─ SKILL.md
 │     └─ resources/
@@ -165,6 +171,8 @@ $REPO_ROOT/
    ├─ integration-test-review/{integration-test-review.md, resources/}
    ├─ e2e-test-review/{e2e-test-review.md, resources/}
    ├─ bug-investigation/{bug-investigation.md, resources/}
+   ├─ current-analysis/{current-analysis.md, resources/}
+   ├─ solution-proposal/{solution-proposal.md, resources/}
    ├─ bug-fix/{...}
    ├─ bug-fix-review/{...}
    └─ auto-check/{auto-check.md, resources/{scripts/, report-template.md}}
@@ -180,7 +188,7 @@ cp -R agents/*  ~/.claude/agents/
 - `skills/` の中身はユーザが呼ぶ「ワークフローの入口」 (Skill カタログに自動 load される)
 - `agents/` の中身は `Task(subagent_type="<name>")` で spawn される「単一責務のサブエージェント」 (Agent カタログに自動 load される)
 
-> 旧バージョンとの互換性メモ: 旧構成では 18 個すべてが `skills/` 配下にあったが、Skill (2) と Agent (16) に分離した (その後 `security-review` / `requirements` / `requirements-review` を追加、`test-run` を `testing` に統合、`bug-investigation` を追加し、現在 Agent は 21)。古い `skills/<phase>/` 等が残っている場合は手動で削除して `~/.claude/agents/` 側に揃えること。
+> 旧バージョンとの互換性メモ: 旧構成では 18 個すべてが `skills/` 配下にあったが、Skill (2) と Agent (16) に分離した (その後 `security-review` / `requirements` / `requirements-review` を追加、`test-run` を `testing` に統合、`bug-investigation` / `current-analysis` / `solution-proposal` と派生 Skill (`bugfix-workflow` / `feature-add-workflow`) を追加し、現在 Skill 4 / Agent 23)。古い `skills/<phase>/` 等が残っている場合は手動で削除して `~/.claude/agents/` 側に揃えること。
 
 ## 新規プロジェクトでの使い方
 
@@ -200,7 +208,7 @@ PowerShell 例 (Windows):
 # このリポジトリのクローン先 (環境に合わせて書き換え)
 $RepoRoot = "$env:USERPROFILE\github\claudecode_settings"
 
-# Skill (2 個) と Agent (21 個) をユーザグローバルに設置
+# Skill (4 個) と Agent (23 個) をユーザグローバルに設置
 $ClaudeSkills = "$env:USERPROFILE\.claude\skills"
 $ClaudeAgents = "$env:USERPROFILE\.claude\agents"
 New-Item -ItemType Directory -Force -Path $ClaudeSkills | Out-Null
@@ -215,7 +223,7 @@ bash / macOS / Linux 例:
 # このリポジトリのクローン先 (環境に合わせて書き換え)
 REPO_ROOT="$HOME/dev/claudecode_settings"
 
-# Skill (2 個) と Agent (21 個) をユーザグローバルに設置
+# Skill (4 個) と Agent (23 個) をユーザグローバルに設置
 mkdir -p ~/.claude/skills ~/.claude/agents
 cp -R "$REPO_ROOT/skills/"* ~/.claude/skills/
 cp -R "$REPO_ROOT/agents/"* ~/.claude/agents/

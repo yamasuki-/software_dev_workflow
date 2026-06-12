@@ -1,8 +1,8 @@
 # ワークフロー全体像
 
-## エージェント構成 (Skill 2 個 + Agent 21 個)
+## エージェント構成 (Skill 4 個 + Agent 23 個)
 
-ユーザは Skill `dev-workflow` (または `dev-workflow-overlay`) を起動する。Skill が「メイン Claude」として動き、各フェーズの作業を Agent (`~/.claude/agents/<name>/<name>.md`) に `Task(subagent_type="<name>")` で委譲する。
+ユーザは Skill `dev-workflow` (または `dev-workflow-overlay`) を起動する。単発の不具合修正・機能追加には軽量な派生 Skill `bugfix-workflow` / `feature-add-workflow` を使う (解析 → 対応方法提案・ユーザ選定 → 設計差分・ユーザ承認 → TDD 実装の 4 ステップ。Agent 群を再利用)。Skill が「メイン Claude」として動き、各フェーズの作業を Agent (`~/.claude/agents/<name>/<name>.md`) に `Task(subagent_type="<name>")` で委譲する。
 
 ```mermaid
 flowchart TD

@@ -232,7 +232,7 @@ auto-check spawn のブリーフ末尾に以下を追記:
 
 本スキルは以下を **絶対に変更しない**:
 
-- インストール済みのベース Skill (`~/.claude/skills/dev-workflow/`) と Agent 群 (`~/.claude/agents/requirements/`, `~/.claude/agents/basic-design/`, `~/.claude/agents/implementation/`, ... の 21 個)、ただし `dev-workflow-overlay` 自身を除く
+- インストール済みのベース Skill (`~/.claude/skills/dev-workflow/`) と Agent 群 (`~/.claude/agents/requirements/`, `~/.claude/agents/basic-design/`, `~/.claude/agents/implementation/`, ... の 23 個)、ただし `dev-workflow-overlay` 自身を除く
 - ベース側のテンプレート群 (本スキルセットがインストール元の git リポジトリ等にある場合、そこも触らない)
 
 書き込みはすべて `<PROJECT_ROOT>/` 配下に限定する。
