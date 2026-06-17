@@ -25,8 +25,8 @@
 | ------------------------------ | ----------------------------------------------------- |
 | `dev-workflow`                 | オーケストレータ。プロジェクト全体の進行を統括 (ユーザとの長期対話、進捗判断、Agent spawn) |
 | `dev-workflow-overlay`         | `dev-workflow` のラッパー。プロジェクト直下 `.dev-workflow/rules/` のプロジェクト固有ルール (必須) と `extra-phases.md` の追加フェーズを反映してベースを実行する。Agent 本体の完全上書きも `<PROJECT_ROOT>/.claude/agents/<name>.md` で可能 (Advanced) |
-| `bugfix-workflow`              | **不具合修正の軽量ワークフロー** (TDD)。インプット = 不具合内容・再現手順・再現率。原因解析 (`bug-investigation`、推測禁止・条件不明はユーザに問合せ) → 対応方法提案 (`solution-proposal`、ユーザ選定) → 設計修正 (差分明示、既存設計なければ逆引き作成) → 🛑 ユーザ承認 → TDD 実装・テスト (`bug-fix` Step3〜 + review)。ベース dev-workflow の規約 (Git 統合・ゲート・所有権) を継承 |
-| `feature-add-workflow`         | **機能追加の軽量ワークフロー** (TDD)。インプット = 現行の動作・機能の変更点。現行解析 (`current-analysis`) → 対応方法提案 (`solution-proposal`、ユーザ選定) → 設計修正 (差分明示、既存設計なければ逆引き作成) → 🛑 ユーザ承認 → TDD 実装・テスト (test-design → Red → Green → 層テスト + 各 review)。1 FID 単位。ベース規約を継承 |
+| `bugfix-workflow`              | **不具合修正の軽量ワークフロー** (TDD)。インプット = 不具合内容・再現手順・再現率。原因解析 (`bug-investigation`、推測禁止・条件不明はユーザに問合せ) → 対応方法提案 (`solution-proposal`、あるべき姿の提示必須・ユーザ選定) → 設計修正 (差分明示、既存設計なければ逆引き作成) → 🛑 ユーザ承認 → TDD 実装・テスト (`bug-fix` Step3〜 + review)。ベース dev-workflow の規約 (Git 統合・ゲート・所有権) を継承 |
+| `feature-add-workflow`         | **機能追加の軽量ワークフロー** (TDD)。インプット = 現行の動作・機能の変更点。現行解析 (`current-analysis`) → 対応方法提案 (`solution-proposal`、あるべき姿の提示必須・ユーザ選定) → 設計修正 (差分明示、既存設計なければ逆引き作成) → 🛑 ユーザ承認 → TDD 実装・テスト (test-design → Red → Green → 層テスト + 各 review)。1 FID 単位。ベース規約を継承 |
 
 ### Agent (23 個)
 
@@ -53,7 +53,7 @@
 | `bug-fix`                      | 不具合修正 (原因調査は `bug-investigation` の独立レポートを引き継ぎ Step 2 から→影響範囲判定とハンドオフ→前工程テスト設計＋コード追加(TDD)→コード修正→テスト実施 の5ステップ反復ループ) |
 | `bug-fix-review`               | 反復ごとに 5ステップの規律違反を検証                  |
 | `current-analysis`             | **現行解析専門 (修正は一切しない)**。機能追加・改修の前提となる現行動作・関連モジュール・既存設計/テストの有無マップ・影響範囲候補を調査。ユーザ説明とコード実態の食い違いを検出。feature-add-workflow の Step 2-1 で使用 |
-| `solution-proposal`            | **対応方法提案専門 (修正は一切しない)**。調査/解析レポートに基づき 2〜4 案 (最小修正案を必ず含む) を影響範囲・工数・リスクのトレードオフ付きで比較し推奨案を返す。**選定はユーザ**。bugfix-workflow / feature-add-workflow で共用 |
+| `solution-proposal`            | **対応方法提案専門 (修正は一切しない)**。調査/解析レポートに基づき、**必要な設計を考慮した「あるべき姿 (理想設計)」案の提示を必須** とし、それを基準点に最小修正案・現実解を影響範囲・工数・リスク・あるべき姿との乖離・技術的負債のトレードオフ付きで比較し推奨案を返す。**選定はユーザ** (理想案を選ばない場合は先送り負債も記録)。bugfix-workflow / feature-add-workflow で共用 |
 | `auto-check`                   | 機械チェックゲート。`stack-config.md` 由来の MUST/SHOULD/MAY ツール (linter / typecheck / markdownlint / カバレッジ等) を実行。MUST 失敗でフェーズ差し戻し |
 
 通常は `dev-workflow` (Skill) を起動する。`dev-workflow` が状況を判断して上記 23 個の Agent を **`Task(subagent_type="<name>")` で spawn** する。
