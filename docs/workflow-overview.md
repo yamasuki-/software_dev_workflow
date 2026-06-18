@@ -47,7 +47,7 @@ flowchart TD
 
 ## Git 統合 (commit ゲート)
 
-開始時に専用ブランチであることを確認する (`main` / `master` / `develop` 上では開始しない)。各ゲート通過時 (review pass / checkpoint approve / testing layer 完了 / bug verified / 最終レポート) に **オーケストレータが commit を作成** する (`[dev-workflow] <phase>: ...` 形式)。push はユーザが履歴を確認したうえで手動で行う。`git reset` / `git rebase` / `--amend` / `--force` などの履歴改変・変更破棄は禁止 (やり直しは新しい commit を積む前方修正のみ)。詳細は `dev-workflow/SKILL.md` §「Git 統合 (commit ゲート)」。
+開始時に専用ブランチであることを確認する (`main` / `master` / `develop` 上では開始しない)。各ゲート通過時 (review pass / checkpoint approve / testing layer 完了 / bug verified / 最終レポート) に **オーケストレータが commit を作成** する (`[dev-workflow] <phase>: ...` 形式)。**すべての commit は実行前にユーザ確認を必須とする** (提案 commit メッセージ・対象ブランチ・変更サマリ `git status` / `git diff --stat` を提示し、承認を得てから commit。承認なしの自動 commit は禁止。WIP・revert も同様)。push はユーザが履歴を確認したうえで手動で行う。`git reset` / `git rebase` / `--amend` / `--force` などの履歴改変・変更破棄は禁止 (やり直しは新しい commit を積む前方修正のみ)。詳細は `dev-workflow/SKILL.md` §「Git 統合 (commit ゲート)」。
 
 ## 全体フロー
 

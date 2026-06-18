@@ -475,7 +475,7 @@ flowchart TD
 ハンドリング:
 1. **pass**:
    - `status.json` の `phases.<phase>.review.status = "completed"`, `last_result = "pass"`, `iteration += 1`
-   - §「Git 統合」の commit ポイントに該当する場合は **commit を作成** してから次へ
+   - §「Git 統合」の commit ポイントに該当する場合は **commit 前にユーザ確認を行い (§「commit 前のユーザ確認」)、承認を得てから commit** してから次へ
    - `current_phase` を次フェーズに進める
    - 次フェーズのサブエージェントを spawn
 2. **fail**:
@@ -520,6 +520,29 @@ flowchart TD
 - メッセージ本文 (2 行目以降) に、対象 FID と pass したレビュー票のパスを 1〜3 行で書く
 - **fail → 再 spawn の修正中は commit しない** (ゲートを通過した状態だけが履歴に残る)。セッション中断時のみ例外として `[dev-workflow] WIP: <どこまで進んだか>` の WIP commit を作ってよい (再開後、次のゲート通過 commit に内容を引き継ぐ)
 
+### commit 前のユーザ確認 (必須・全 commit 共通)
+
+**`git commit` を実行する前に、必ずユーザに確認を取り、承認を得てから commit する。** WIP commit・revert を含め例外なし。確認なしの自動 commit は禁止。
+
+1. commit 直前に、以下を 1 メッセージでユーザに提示する:
+   - 提案する **commit メッセージ** (1 行目 + 本文)
+   - **対象ブランチ名** (専用ブランチであることの再確認)
+   - **変更サマリ**: `git status --short` と `git diff --stat` の結果 (ファイル数・追加/削除行数)
+   - 必要に応じて主要差分の要約 (大きい場合はファイル単位の要点)
+2. ユーザの応答で分岐:
+
+   | 応答 | 動作 |
+   |---|---|
+   | `commit` / 「承認」/「OK」など肯定 | `git add -A` → `git commit` を実行。次のステップへ |
+   | `<メッセージ修正>` (例: 「メッセージを〜にして」) | 指示どおり commit メッセージを直して再提示 → 再確認 |
+   | `<除外指定>` (例: 「このファイルは含めないで」) | 該当を除外して `git add` (`-A` を使わず明示パス指定) → 差分を再提示 → 再確認 |
+   | `skip` / 「今はしない」 | commit せず次へ進む (`decisions.md` に「ユーザ判断で <ゲート> の commit を見送り」を記録)。未 commit 変更は次のゲートの確認時にまとめて提示 |
+
+3. Cowork では `AskUserQuestion` (選択肢: commit する / メッセージを直す / 今はしない) を使ってよい。Claude Code ではチャットで確認する。
+4. **ユーザ承認のないまま commit を実行してはならない**。承認待ちでターンを終えること。
+
+> **human-checkpoint 直後の commit**: チェックポイント承認 (approve) のターンで、続けて commit 確認を 1 メッセージにまとめてよい (「承認します。続けて以下の内容で commit します: …」と提示し、approve = commit 承認も兼ねる)。確認の回数を減らすための運用で、commit 前確認の原則は満たす。
+
 ### 禁止事項 (履歴は必ず人が確認できる状態を保つ)
 
 - **`git push` をしない**。push はユーザが commit 履歴を確認したうえで手動で行う
@@ -554,7 +577,7 @@ flowchart TD
 
 | ユーザ応答 | オーケストレータの動作 |
 |---|---|
-| `approve` / 「承認」 / 「OK」など肯定 | `decisions.md` に「YYYY-MM-DDTHH:MM:SSZ: <phase> をユーザが承認」を追記。`status.json` の `checkpoints.<phase>.status = "approved"` / `approved_at = <ts>` に更新。**§「Git 統合」に従い commit を作成**。次フェーズへ進む |
+| `approve` / 「承認」 / 「OK」など肯定 | `decisions.md` に「YYYY-MM-DDTHH:MM:SSZ: <phase> をユーザが承認」を追記。`status.json` の `checkpoints.<phase>.status = "approved"` / `approved_at = <ts>` に更新。**§「Git 統合」に従い commit (commit 前のユーザ確認も実施)**。次フェーズへ進む |
 | `<具体的な変更要求>` (例: 「F002 の機能定義を見直して」) | 該当 FID / ドキュメントを briefing に含めて該当 Agent (`basic-design` / `detailed-design`) を再 spawn。完了後に auto-check → review per_feature → review cross → 再 checkpoint |
 | `skip checkpoint` / 「スキップ」 (明示のみ) | `decisions.md` に「YYYY-MM-DDTHH:MM:SSZ: ユーザにより <phase> checkpoint をスキップ」を追記。`checkpoints.<phase>.status = "skipped"` / `skipped_at = <ts>` に。次フェーズへ進む |
 

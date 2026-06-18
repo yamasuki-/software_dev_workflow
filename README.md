@@ -10,7 +10,7 @@
 - **TDD を強制**: 詳細設計の後に必ず **テスト設計 → テストコード作成 (Red) → 実装 (Green)** の順で進む。テストコードはプロダクトコードより必ず先に書く。
 - **フェーズごとの専用レビューゲート**: 各フェーズ完了直後に対応するレビュースキルが自動 spawn され、インプット (前工程の成果物) との整合や規律順守、**横断的な一貫性と共通化の機会** を検証する。**レビュー pass しない限り次フェーズに進まない**。
 - **進捗の永続化**: 各機能・各タスクの状態を `.dev-workflow/` 配下の JSON / Markdown に保存。セッションが切れても続きから再開できる。サブエージェント間の引き継ぎもこのファイルを介して行う。
-- **Git 統合 (commit ゲート)**: 専用ブランチ上での開始を前提とし (main/master では開始しない)、**各ゲート通過時にオーケストレータが commit を作成**。push はユーザが手動で行い、`reset` / `rebase` / `--amend` 等の履歴改変は禁止 (履歴は必ず人が確認できる状態を保つ)。
+- **Git 統合 (commit ゲート)**: 専用ブランチ上での開始を前提とし (main/master では開始しない)、**各ゲート通過時にオーケストレータが commit を作成 (commit は実行前に必ずユーザ確認・承認を得てから)**。push はユーザが手動で行い、`reset` / `rebase` / `--amend` 等の履歴改変は禁止 (履歴は必ず人が確認できる状態を保つ)。
 - **推測しない**: 不明点はユーザに確認する。重要度が高ければ即時、軽微なものはフェーズ末でまとめて (ハイブリッド方針)。
 - **Mermaid を用いた図表**: 状態遷移、ER図、シーケンス図は Mermaid で記述。
 
@@ -99,6 +99,7 @@
 
 - **前提**: 開始時に専用ブランチ (例: `dev-workflow/<プロジェクト名>`) 上であること。`main` / `master` / `develop` 上では開始せず、ユーザに切替を依頼する
 - **commit タイミング**: 各ゲート通過時 (review pass / checkpoint approve / testing layer 完了 / bug verified / 最終レポート)。メッセージは `[dev-workflow] <phase>: ...` 形式。fail → 修正中は commit しない
+- **commit 前のユーザ確認 (必須)**: すべての commit は **実行前にユーザへ提案 commit メッセージ・対象ブランチ・変更サマリ (`git status` / `git diff --stat`) を提示し、承認を得てから** 実行する。承認なしの自動 commit は禁止 (WIP・revert も含む)。Cowork では `AskUserQuestion` で確認。human-checkpoint 直後はチェックポイント承認と commit 確認を 1 メッセージに統合してよい
 - **push はユーザが手動で行う** (オーケストレータは push しない)
 - **履歴改変の禁止**: `git reset` / `git rebase` / `git commit --amend` / `git push --force` / 変更破棄 (`git restore` 等) は禁止。やり直しは新しい commit を積む前方修正のみ (`git revert` は可)。例外はユーザの明示指示 + `decisions.md` 記録時のみ
 
