@@ -70,9 +70,13 @@ model: inherit
   - [ ] 入れない判断の場合、bug-fix Step 4 で当該コードが除去されている (`code_fix.changed_files[]` に除去対象が含まれる)
 - [ ] `decisions.md` に「B<NNN>: 差し戻し判断と理由」が追記されている
 
-### Step 3: 前工程テスト設計＋テストコード追加 (TDD Red 確認)
+### Step 3: テストコードの修正 (TDD Red 確認・実装より前)
+- [ ] **再現テスト (Step 3-0) が確保され、実装前に Red 確認済み** (`reproduction_test.red_confirmed = true`)
+  - [ ] 報告ベースの不具合 (`newly_created = true`) で、再現手順が失敗テストとして書き起こされている
+  - [ ] `reproduction_test.test_case_id` が `found_in_test_case_id` と一致
+  - [ ] **検出層が unit でも再現テストはスキップされていない** (スキップ可なのは 3-1 の前工程補強だけ)
 - [ ] `applicable_layers[]` が検出層に応じて正しい (unit→なし / integration→unit / e2e→unit+integration)
-- [ ] `applicable = false` の場合は、スキップ理由が明確
+- [ ] `applicable = false` (前工程補強なし) の場合でも、再現テストの Red 確認は満たされている
 - [ ] `applicable = true` の場合:
   - [ ] `updated_test_design_files[]` でテスト設計が更新されている
   - [ ] `added_test_code_paths[]` に新規/修正テストコードが列挙されている
@@ -88,8 +92,8 @@ model: inherit
 
 ### Step 5: テスト実施 (Verification)
 - [ ] `executed_test_ids[]` に以下4種すべてが含まれる:
-  1. 検出元のテストID
-  2. Step 3 で追加・修正したテストID
+  1. 再現テストID (Step 3-0。修正後 Green であること)
+  2. Step 3-1 で追加・修正したテストID
   3. 同一機能 (`<FID>`) のリグレッション全件
   4. 横断的影響範囲のテスト (該当時)
 - [ ] `pass_count`, `fail_count`, `failed_test_ids[]` が記録されている

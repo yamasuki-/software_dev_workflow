@@ -42,8 +42,8 @@ flowchart TD
     HObasic --> S3
     HOcheck -->|入るべき = 設計更新| S3
     HOcheck -->|入れない = コードから除去| S4
-    S3[3 前工程テスト設計修正 + テストコード追加<br/>TDD 先に Fail を確認] --> S4
-    S4[4 コード修正] --> S5
+    S3[3 テストコード修正<br/>3-0 再現テスト確保 必須 Red<br/>3-1 前工程補強 任意 Red] --> S4
+    S4[4 コード修正 実装] --> S5
     S5[5 テスト実施 検出元 追加分 リグレッション]
     S5 -->|全 Pass| Verified([verified])
     S5 -->|Fail あり| Loop[次の反復へ]
@@ -165,7 +165,26 @@ bug-report.md の「1. 原因調査」セクションには調査レポートへ
 
 ---
 
-### Step 3 : 前工程テスト設計の修正 + テストコード追加 (Test Design & Code Fix) — **必ず TDD**
+### Step 3 : テストコードの修正 (Test Design & Code Fix) — **必ず TDD / 実装 (Step 4) より前**
+
+本ステップは 2 つの要素からなる。**どちらも Step 4 (コード修正) より前に行い、Red を確認する**:
+
+- **(I) 再現テスト** — この不具合そのものを捕捉する失敗テスト (後述 3-0)
+- **(II) 前工程テストの補強** — 再発を防ぐより細かい層の網 (後述 3-1)
+
+#### Step 3-0 : 再現テストの確保 (必須・スキップ不可)
+
+不具合を **自然な層で再現する失敗テスト** が「実装前に Red で存在する」ことを必ず保証する。
+
+| 不具合の出どころ | 再現テストの扱い |
+| --- | --- |
+| testing フェーズで検出 (`found_in_test_case_id` あり) | 既にその検出テストが Red で存在する → これを再現テストとして扱う (新規作成不要) |
+| **報告ベース (再現手順のみ。bugfix-workflow の入力)** | **再現テストがまだ無い。** 再現手順を最も適切な層 (unit を優先、必要なら integration/e2e) の **失敗テストとして新規に書き起こし、修正前コードで Fail (Red) を必ず確認する**。このテストIDを `found_in_test_case_id` に記録する |
+
+- 再現テストの Red が確認できない (= 修正前なのに Pass してしまう) 場合、再現条件かテスト観点が不十分。Step 1 (原因調査 = bug-investigation) に戻して再現条件を詰める
+- **この 3-0 は検出層が unit でもスキップしない** (スキップしてよいのは 3-1 の前工程補強だけ)
+
+#### Step 3-1 : 前工程テストの補強
 
 **前工程の定義:**
 不具合の検出層より **左側 (より細かい層)** がそれにあたる。
@@ -196,7 +215,7 @@ bug-report.md の「1. 原因調査」セクションには調査レポートへ
 5. テスト実行ログを `docs/04_test_results/<FID>/<該当層>-result.md` に **「TDD 確認」セクションとして追記**。
 6. 既存層のテストコード本体だけ追加した場合も、`docs/03_test_design/<FID>/*.md` のテスト一覧に必ず反映 (設計とコードのトレーサビリティ維持)。
 
-スキップ条件:
+前工程補強 (3-1) のスキップ条件 (※ 再現テスト 3-0 はスキップ不可):
 - 検出層が `unit` で、それより細かい層が定義上存在しない場合
 - 設計上「この機能は当該層をテスト不要」と決定済み (該当する `decisions.md` 参照)
 
@@ -204,7 +223,12 @@ bug-report.md の「1. 原因調査」セクションには調査レポートへ
 ```
 iterations[i].sub_phases.test_design_fix:
   status = "completed"
-  applicable = true | false
+  reproduction_test:                       # 3-0 (必須)
+    test_case_id = "UT-F001-009"           # found_in_test_case_id と一致
+    test_code_path = "tests/unit/F001/test_xxx.py"
+    red_confirmed = true                   # 修正前コードで Fail を確認済み
+    newly_created = true | false           # 報告ベースなら true、検出済みテスト流用なら false
+  applicable = true | false                # 3-1 (前工程補強) を行ったか
   applicable_layers = ["unit", "integration"]
   updated_test_design_files = ["docs/03_test_design/..."]
   added_test_code_paths = ["tests/unit/F001/test_xxx.py", ...]
@@ -213,7 +237,7 @@ iterations[i].sub_phases.test_design_fix:
   summary = "<追加観点とコードの要点>"
 ```
 
-スキップする場合は `applicable = false` と理由を記載。
+3-1 をスキップする場合は `applicable = false` と理由を記載 (ただし `reproduction_test.red_confirmed = true` は必須)。
 
 ---
 
@@ -238,8 +262,8 @@ iterations[i].sub_phases.code_fix:
 
 以下の順で実行し、すべての結果を記録する:
 
-1. **検出元のテスト** (`found_in_test_case_id`)
-2. **ステップ3で追加・修正したテスト** (今回の反復で TDD 用に書いたケース)
+1. **再現テスト** (`found_in_test_case_id` = Step 3-0 で確保したテスト)。修正後は **Pass (Green) になること**
+2. **ステップ3-1 で追加・修正したテスト** (今回の反復で前工程補強として書いたケース)
 3. **同一機能のリグレッション全件** (`docs/03_test_design/<FID>/*.md` の全テスト)
 4. **横断的影響範囲のテスト** (該当時): 設計修正が他機能に波及する場合、その機能のテストも実行
 
@@ -300,7 +324,8 @@ bug-fix-review の判定に従い:
 - [ ] 分類 (`classification`) が記録され、必要な場合は設計フェーズに差し戻されている
 - [ ] 差し戻した場合: 該当設計フェーズの **per_feature レビュー + cross レビュー両方** を pass している (`design_review_per_feature_passed && design_review_cross_passed`)
 - [ ] `undocumented_behavior` の場合: 設計フェーズが「入れるべきか」を判断し、`decision_notes` に結論と理由が記録されている
-- [ ] 前工程テスト層の補強が **TDD で** 行われている (修正前 Fail / 修正後 Pass を確認)
+- [ ] **再現テスト (Step 3-0) が実装前に Red 確認済み** (`reproduction_test.red_confirmed = true`)。報告ベースの不具合では新規作成され、修正後 Green になっている
+- [ ] 前工程テスト層の補強 (Step 3-1) が **TDD で** 行われている (修正前 Fail / 修正後 Pass を確認)。スキップ時も再現テストは Red 確認済み
 - [ ] コード修正で投入したデバッグコードが残っていない
 - [ ] 検出元・追加分・機能内リグレッションがすべて Pass
 - [ ] `bug.json` の最新反復 `iterations[-1].result = "pass"`, `status = "verified"`
