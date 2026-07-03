@@ -1,9 +1,24 @@
 ---
 name: feature-add-workflow
-description: 既存システムへの機能追加・機能変更を「現行解析 → 対応方法提案 (ユーザ選定) → 設計修正 (差分明示) → ユーザ承認 → TDD で実装・テスト」の 4 ステップで進める軽量ワークフローのオーケストレータ。インプットは現行の動作と機能の変更点の 2 点。dev-workflow の Agent 群 (current-analysis / solution-proposal / basic-design / detailed-design / test-design / test-implementation / implementation / testing / 各 review) を再利用する。フルの dev-workflow を回すまでもない単発の機能追加・改修に使用する。
+description: 既存システムへの機能追加・機能変更を「現行解析 → 対応方法提案 (ユーザ選定) → 設計修正 (差分明示) → ユーザ承認 → TDD で実装・テスト」の 4 ステップで進める軽量ワークフローのオーケストレータ。インプットは現行の動作と機能の変更点の 2 点。dev-workflow の Agent 群 (current-analysis / solution-proposal / basic-design / detailed-design / test-design / test-implementation / implementation / testing / 各 review) を再利用する。フルの dev-workflow を回すまでもない単発の機能追加・改修に使用する。例外: 1〜数行の自明な修正で解決策が指定済みの場合は本ワークフローを起動せず直接修正してよい (ただし設計書整合の更新とテスト追加・Green 確認は必須)。
 ---
 
 # feature-add-workflow — 機能追加ワークフロー
+
+## 対象外 (自明な修正)
+
+以下をすべて満たす依頼は本ワークフローを起動せず、直接修正でよい:
+
+- 変更が 1〜数行に収まる
+- ユーザが解決策 (何をどう変えるか) を指定済みで、解析・提案のステップが不要
+
+ただし直接修正の場合も次の 3 点をセットで必ず行う (省略禁止):
+
+1. コード修正
+2. 関連設計書の整合更新 (コード行番号の参照があればそのずれも反映)
+3. テスト追加・更新と Green 確認
+
+影響範囲が不明 / 複数機能 (F###) にまたがる / 解決策が未定、のいずれかに当てはまる場合は対象外にせず本ワークフローを使う。迷う場合はユーザに確認する。
 
 ## ベース規約の継承
 
