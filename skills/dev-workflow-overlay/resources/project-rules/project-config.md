@@ -32,6 +32,19 @@
 - 環境構成 (Dev/Stg/Prod):
 - IaC ツール:
 
+## チェックポイント設定 (human-checkpoint)
+
+> checkpoint 有効/無効の設定箇所は **ここのみ** (project.json 側に enabled フラグは無い)。
+> このセクションが無い場合は 3 つとも有効がデフォルト。
+
+- requirements: enabled
+- basic-design: enabled
+- detailed-design: enabled
+<!-- 無効化する場合は disabled にし、理由を 1 行添える:
+- basic-design: disabled
+  - 理由: 個人プロジェクトのため
+-->
+
 ## ADD (ワークフロー全体への追加ルール)
 - 例: PR タイトルは Conventional Commits に従う
 - 例: 全関数に docstring 必須

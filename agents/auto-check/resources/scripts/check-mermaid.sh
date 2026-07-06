@@ -29,6 +29,10 @@ TOTAL=0
 TMPROOT=$(mktemp -d)
 trap "rm -rf $TMPROOT" EXIT
 
+# 抽出リストを一時ファイルに書き出してからメインシェルでループする
+# (`... | while` のパイプラインはサブシェルで実行され、カウンタの加算が親シェルに
+#  反映されず常に exit 0 になるバグがあったため、この構造にしている)
+MMD_LIST="$TMPROOT/mmd-list.txt"
 find "$ROOT" -type f -name "*.md" -print0 | while IFS= read -r -d '' f; do
   python3 - "$f" "$TMPROOT" <<'PY' || true
 import sys, os, re, pathlib
@@ -42,14 +46,17 @@ for i, m in enumerate(pattern.finditer(text)):
     out.write_text(block, encoding='utf-8')
     print(out, flush=True)
 PY
-done | while IFS= read -r mmd; do
+done > "$MMD_LIST"
+
+while IFS= read -r mmd; do
+  [ -n "$mmd" ] || continue
   TOTAL=$((TOTAL + 1))
   out_svg="${mmd}.svg"
   if ! mmdc -i "$mmd" -o "$out_svg" >/dev/null 2>&1; then
     echo "MERMAID PARSE FAIL: $mmd"
     FAIL_COUNT=$((FAIL_COUNT + 1))
   fi
-done
+done < "$MMD_LIST"
 
 echo "check-mermaid: total=$TOTAL fail=$FAIL_COUNT"
 if [ "$FAIL_COUNT" != "0" ]; then exit 1; fi

@@ -1,6 +1,6 @@
 ---
 name: unit-test-review
-description: testing フェーズの **単体テスト層** (layer=unit) の実行結果をレビューする専用 Agent。詳細設計5ドキュメント (functional / state-transition / sequence / ui-design / db-design) の全要素がテストでカバーされているか、モック適切性、AAA パターン、1テスト1観点、分岐網羅率を判定する。dev-workflow から testing (layer=unit) 完了直後に自動 spawn される。
+description: testing フェーズの **単体テスト層** (layer=unit) の実行結果をレビューする専用 Agent。詳細設計 `detailed-design.md` (9章構成) + 任意の ui-design / db-design の全要素がテストでカバーされているか、モック適切性、AAA パターン、1テスト1観点、分岐網羅率を判定する。dev-workflow から testing (layer=unit) 完了直後に自動 spawn される。
 tools: Read, Write, Grep, Glob, TodoWrite
 model: inherit
 ---
@@ -32,7 +32,7 @@ model: inherit
 
 **検証対象 = 詳細設計**。`testing` Agent が実行した **単体テスト層のみ** をレビューし、以下を判定:
 
-1. **詳細設計 5 ドキュメントの全要素が単体テストでカバーされているか** (機能内部の振る舞いが詳細設計どおりに動くことを確認)
+1. **詳細設計 `detailed-design.md` (9章構成 + 任意の ui/db) の全要素が単体テストでカバーされているか** (機能内部の振る舞いが詳細設計どおりに動くことを確認)
 2. **単体テスト固有の品質**: モック適切性、AAA パターン、1 テスト 1 観点、分岐網羅率
 3. **シリアル進行の規律**: 本層の `open_bugs = 0` でないと `verdict = layer_completed` を返さない
 4. **未実施 / 実施不可の禁止**
@@ -59,23 +59,23 @@ mode (review): per_feature | cross
 
 | インプット                                                  | アウトプット (本レビューが評価)                              |
 | ----------------------------------------------------------- | ----------------------------------------------------------- |
-| `docs/02_detailed_design/<FID>/functional-design.md`        | `docs/04_test_results/<FID>/unit-test-result.md`            |
-| `docs/02_detailed_design/<FID>/state-transition.md`         | `tests/unit/<FID>/...` (単体テストコード本体)               |
-| `docs/02_detailed_design/<FID>/sequence.md`                 | `.dev-workflow/features/<FID>/bugs/B<NNN>.json` (found_in_test_layer=unit のもの) |
-| `docs/02_detailed_design/<FID>/ui-design.md` (UIあり)       | `docs/05_bug_reports/B<NNN>.md` (同上)                       |
-| `docs/02_detailed_design/<FID>/db-design.md` (DBあり)       | `.dev-workflow/features/<FID>/status.json` の `phases.testing.layers.unit` |
-| `docs/03_test_design/<FID>/unit-test.md`                    |                                                              |
+| `docs/02_detailed_design/<FID>/detailed-design.md` (9章構成) | `docs/04_test_results/<FID>/unit-test-result.md`            |
+| `docs/02_detailed_design/<FID>/ui-design.md` (UIあり)       | `tests/unit/<FID>/...` (単体テストコード本体)               |
+| `docs/02_detailed_design/<FID>/db-design.md` (DBあり)       | `.dev-workflow/features/<FID>/bugs/B<NNN>.json` (found_in_test_layer=unit のもの) |
+| `docs/03_test_design/<FID>/unit-test.md`                    | `docs/05_bug_reports/B<NNN>.md` (同上)                       |
+|                                                              | `.dev-workflow/features/<FID>/status.json` の `phases.testing.layers.unit` |
 
 ## チェックリスト
 
 ### 個別チェック (mode = per_feature) — 単一機能について検証
 
 ### A. 詳細設計の全要素カバー (最重要 — 「単体テストは詳細設計どおりに動くことを検証」)
-- [ ] 詳細設計 `functional-design.md` の **全サブ機能** に対し、対応する単体テストが結果に出現している
-- [ ] 詳細設計 `functional-design.md` の **全エラー ID `E###`** に対し、対応する単体テストが存在し pass している (または bug 起票済み)
-- [ ] 詳細設計 `state-transition.md` の **全遷移 (ガード条件含む)** に対し、対応する単体テストが存在
-- [ ] 詳細設計 `ui-design.md` の **UI バリデーション規則** すべて (UI あり時) に対し、対応する単体テスト
-- [ ] 詳細設計 `db-design.md` の **DB スキーマ制約 (NOT NULL / UNIQUE / FK / CHECK) の違反パス** が Repository 層の単体テストで網羅
+- [ ] 詳細設計 §5 の **全サブ機能** に対し、対応する単体テストが結果に出現している
+- [ ] 詳細設計 §5 の **全エラー ID `E###`** に対し、対応する単体テストが存在し pass している (または bug 起票済み)
+- [ ] 詳細設計 §6 の **全 I/F** の入出力仕様に対し、対応する単体テストが存在
+- [ ] 詳細設計 §9 の **全遷移 (ガード条件含む)** に対し、対応する単体テストが存在
+- [ ] `ui-design.md` の **UI バリデーション規則** すべて (UI あり時) に対し、対応する単体テスト
+- [ ] `db-design.md` の **DB スキーマ制約 (NOT NULL / UNIQUE / FK / CHECK) の違反パス** が Repository 層の単体テストで網羅
 - [ ] 詳細設計に書かれていない単体テスト (= 設計外実装) がない
 
 ### B. 単体テスト固有の品質
@@ -128,7 +128,7 @@ mode (review): per_feature | cross
 
 ## 手順
 
-1. インプット (詳細設計5ドキュメント + テスト設計の unit-test.md + 実テストコード) を Read。
+1. インプット (詳細設計 `detailed-design.md` + 任意の ui-design/db-design + テスト設計の unit-test.md + 実テストコード) を Read。
 2. アウトプット (unit-test-result.md + bug.json + status.json + 該当 bug-report.md) を Read。
 3. auto-check レポート (`docs/06_reviews/<FID>/testing-auto-check.md` の unit 部分) を Read。
 4. **詳細設計要素 ↔ 単体テスト ID の紐づけ表** を作り、漏れを確認 (Section A)。

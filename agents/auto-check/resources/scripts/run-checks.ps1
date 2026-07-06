@@ -46,7 +46,7 @@ $parsed = $parsedJson | ConvertFrom-Json
 
 if (-not $Out) {
   if ($Mode -eq "cross") {
-    $OutDir = Join-Path $ProjectRoot "docs/06_reviews/cross"
+    $OutDir = Join-Path $ProjectRoot "docs/06_reviews/_cross"
   } else {
     $OutDir = Join-Path $ProjectRoot "docs/06_reviews/$Target"
   }

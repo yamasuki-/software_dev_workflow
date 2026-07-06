@@ -36,7 +36,7 @@ project_root:     <PROJECT_ROOT 絶対パス>
 
 | 項目 | 配置 / 戻り値 |
 |---|---|
-| 機械チェックレポート | `<PROJECT_ROOT>/docs/06_reviews/<FID>/<phase>-auto-check.md` (per_feature) / `docs/06_reviews/cross/<phase>-auto-check.md` (cross) |
+| 機械チェックレポート | `<PROJECT_ROOT>/docs/06_reviews/<FID>/<phase>-auto-check.md` (per_feature) / `docs/06_reviews/_cross/<phase>-auto-check.md` (cross) |
 | 判定 | `must_passed` (bool), `should_warnings` (count), `may_info` (count), `skipped_missing_tools` (list) |
 | 状態ファイル更新 | `.dev-workflow/features/<FID>/status.json` の `phases.<phase>.auto_check` |
 
@@ -187,7 +187,7 @@ report: <絶対パス>
 | mode | 対象 | レポート配置 | 主な目的 |
 |---|---|---|---|
 | `per_feature` | 1 機能 (`<FID>`) | `docs/06_reviews/<FID>/<phase>-auto-check.md` | その機能の成果物が壊れていないか機械的に検証 |
-| `cross` | プロジェクト全体 | `docs/06_reviews/cross/<phase>-auto-check.md` | 全機能を横断的にスキャン (重複コード / 命名一貫性 / リンク切れ) |
+| `cross` | プロジェクト全体 | `docs/06_reviews/_cross/<phase>-auto-check.md` | 全機能を横断的にスキャン (重複コード / 命名一貫性 / リンク切れ) |
 
 横断レビューに対応する cross モードの auto-check では、jscpd / lychee などの「全体スキャン」系ツールが活きる。
 

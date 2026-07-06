@@ -41,7 +41,7 @@ model: inherit
 
 ## 役割
 
-**インプット = 詳細設計5ドキュメント + テスト設計3ドキュメント + テストコード**、**アウトプット = プロダクトコード** の整合を確認する。
+**インプット = 詳細設計 `detailed-design.md` (+任意の ui/db) + テスト設計3ドキュメント + テストコード**、**アウトプット = プロダクトコード** の整合を確認する。
 **ユーザ指示の通り「インプットとなる前工程の成果物通りであるか」を必ず確認する**。
 
 本スキルは **2 段ゲート** の一部として動作する: `mode=per_feature` を全機能分→ `mode=cross` を 1 回。
@@ -61,7 +61,7 @@ model: inherit
 
 | インプット                                                | アウトプット                                                |
 | --------------------------------------------------------- | ----------------------------------------------------------- |
-| `docs/02_detailed_design/<FID>/*.md` (5種)                | `src/...` (プロジェクト固有のプロダクトコード)              |
+| `docs/02_detailed_design/<FID>/detailed-design.md` (+任意の ui-design / db-design) | `src/...` (プロジェクト固有のプロダクトコード)              |
 | `docs/03_test_design/<FID>/*.md`                          | `.dev-workflow/features/<FID>/tasks/<TID>.json` (全タスク)  |
 | `tests/{unit,integration,e2e}/<FID>/...` (既存失敗テスト) | `.dev-workflow/features/<FID>/status.json`                  |
 
@@ -86,14 +86,15 @@ model: inherit
 - [ ] テスト数が test-implementation 完了時から増減していない
 
 ### C. プロダクトコード ↔ 詳細設計 の整合
-- [ ] `functional-design.md` のサブ機能と実装上の関数/メソッドが対応している
-- [ ] `db-design.md` のテーブル定義 (型、NOT NULL、PK、FK、デフォルト、インデックス) と実装のスキーマが一致
-- [ ] `state-transition.md` の状態遷移とコード上の状態管理ロジックが一致
-- [ ] `sequence.md` の各 UC の流れ (呼び出し先・タイミング) とコードが一致
+- [ ] `detailed-design.md` §5 のサブ機能と実装上の関数/メソッドが対応している
+- [ ] `detailed-design.md` §6 の I/F 定義 (関数型・入出力) と実装上のシグネチャが一致
+- [ ] `detailed-design.md` §7-8 の各シーケンスパターンの流れ (呼び出し先・タイミング) とコードが一致
+- [ ] `detailed-design.md` §9 の状態遷移とコード上の状態管理ロジックが一致
+- [ ] `db-design.md` のテーブル定義 (型、NOT NULL、PK、FK、デフォルト、インデックス) と実装のスキーマが一致 (DBあり)
 - [ ] `ui-design.md` の項目・操作・遷移・バリデーションがフロント実装に反映 (UIあり)
 
 ### D. 例外/エラー処理
-- [ ] `functional-design.md` の各エラーID (`E###`) に対応する例外処理コードが存在
+- [ ] `detailed-design.md` §5 の各エラーID (`E###`) に対応する例外処理コードが存在
 - [ ] エラーメッセージが `ui-design.md` のメッセージ一覧と一致
 
 ### E. 非機能要件

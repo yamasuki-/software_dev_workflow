@@ -1,6 +1,6 @@
 ---
 name: test-design
-description: 機能ごとに単体テスト・結合テスト・E2E (システム) テストの設計ドキュメントを作成する。詳細設計から各テスト観点を洗い出し、テストID付きの一覧と要件への双方向トレーサビリティを確保する。実行可能なテストコードを書く工程は次の test-implementation に委譲する (TDD)。`dev-workflow` から `current_phase = test_design` のときに呼ばれる、または「<機能ID> のテスト設計をして」と言われた時に使用する。
+description: 機能ごとに単体テスト・結合テスト・E2E (システム) テストの設計ドキュメントを作成する。詳細設計から各テスト観点を洗い出し、テストID付きの一覧と要件への双方向トレーサビリティを確保する。実行可能なテストコードを書く工程は次の test-implementation に委譲する (TDD)。`dev-workflow` から `current_phase = test_design` のときに呼ばれる、または「<機能ID> のテスト設計をして」と言われた時に使用する。`reverse-design-workflow` からは **mode=characterization** で呼ばれ、逆生成した設計書の主張をそのまま期待値とするテスト仕様 (期待状態 = PASS) を起こす (§「実行モード」参照)。
 tools: Read, Write, Edit, Bash, Grep, Glob, TodoWrite
 model: inherit
 ---
@@ -25,7 +25,28 @@ model: inherit
 
 ## 役割
 詳細設計をもとに、機能単位で以下の3層の **テスト設計ドキュメント** (テストケース一覧 + 観点 + 期待結果) を作成する。
-**実行可能なテストコードは書かない**。コードへの落とし込みは次フェーズの `test-implementation` が担当する。本フェーズの責務はあくまで「何をテストすべきかを言語化して合意すること」。
+**実行可能なテストコードは書かない**。コードへの落とし込みは次フェーズの `test-implementation` が担当する (characterization モードでは `conformance-test`)。本フェーズの責務はあくまで「何をテストすべきかを言語化して合意すること」。
+
+## 実行モード (forward / characterization)
+
+ブリーフの `mode` で挙動が分かれる。**指定がなければ `forward`**。
+
+| | `mode: forward` (デフォルト・TDD) | `mode: characterization` (reverse-design-workflow 用) |
+|---|---|---|
+| インプット | forward で作成された設計ドキュメント | `reverse-design` が逆生成/修正した設計ドキュメント (ブリーフで指定) |
+| 期待値の源泉 | 設計 + 要件 (これから作る正解) | **設計書の主張をそのまま転記** (既存コードの記述) |
+| 期待状態 | 後続 test-implementation で **Red** (実装が無いので Fail) | **PASS** (設計が実コードと一致していれば通る) |
+| 対象層 | 3 層すべて (unit / integration / e2e) | **ブリーフの `layer` で指定された 1 層のみ** (detailed→unit / basic→integration / requirements→e2e) |
+| コード化の担当 | `test-implementation` | `conformance-test` |
+| Step 5 (ユーザレビュー) / Step 6 (進捗確定) | 実施する | **スキップ** (承認は reverse-design-workflow の human-checkpoint 側。status.json 更新はブリーフの指示に従い、戻り値で conformance-test の spawn を要請する) |
+
+**characterization モードの規律:**
+
+1. 期待値は **検証対象の設計ドキュメントに書かれた主張のみ** から起こす。**ソースコードを覗いて期待値を決めることは禁止** (それでは設計の検証にならない。conformance-test 側の「カンニング禁止」と同じ理由)
+2. 設計書の記述が曖昧で期待入出力を確定できないケースは、期待値を捏造せず `blockers` で `reverse-design` への差し戻しを要請する (conformance-test の `spec_incomplete` 判定に相当)
+3. conformance が `mismatch` になった後の再 spawn では、**修正後の設計** に合わせて該当ケースのみ仕様を更新する (修正順序: 設計書 → テスト仕様書 → テストコード、の 2 段目を担う)
+4. 出力先・ID 規約・記述項目 (§「成果物」「ID 規約」、Step 3) は forward と共通 (`docs/03_test_design/<FID>/<layer>-test.md`)。conformance-test はこのパスを読む
+5. 本文中の TDD (Red 先行) に関する記述は characterization モードには適用しない
 
 ## バッチ実行と横断認識
 
@@ -70,9 +91,7 @@ model: inherit
 3 層それぞれが検証すべき設計層が異なるため、**3 層分すべての設計ドキュメントを読み込む**。
 
 **単体テスト用 (詳細設計)** — 対象機能 `<FID>` の以下を Read:
-- `docs/02_detailed_design/<FID>/functional-design.md` (サブ機能・例外/エラー処理表)
-- `docs/02_detailed_design/<FID>/state-transition.md` (状態遷移)
-- `docs/02_detailed_design/<FID>/sequence.md` (シーケンス図 — 単体側は呼び出し詳細を見る)
+- `docs/02_detailed_design/<FID>/detailed-design.md` (9章構成: §3-5 サブ機能・例外/エラー処理、§6 I/F 定義、§7-8 シーケンス — 単体側は呼び出し詳細を見る、§9 状態遷移)
 - `docs/02_detailed_design/<FID>/ui-design.md` (UI バリデーション、UI あり時)
 - `docs/02_detailed_design/<FID>/db-design.md` (DB スキーマ制約、DB あり時)
 
@@ -92,11 +111,12 @@ model: inherit
 
 #### 単体テストの観点 — **詳細設計** を網羅検証
 
-> **検証対象 = 詳細設計**。詳細設計5ドキュメントの各要素 (サブ機能 / 例外 / 状態遷移 / UI バリデーション / DB 制約) を漏れなくテストに落とす。
+> **検証対象 = 詳細設計**。`detailed-design.md` の各要素 (サブ機能 / 例外 / I/F / 状態遷移) と任意ドキュメント (UI バリデーション / DB 制約) を漏れなくテストに落とす。
 
-- 機能設計のサブ機能ごとに最低: 正常系1 + 境界値1 + 異常系1
-- 機能設計の **例外/エラー処理表** の各エラーID `E00x` に対して1テスト以上
-- 状態遷移の各遷移 (ガード条件含む) に対して1テスト以上
+- サブ機能 (§5) ごとに最低: 正常系1 + 境界値1 + 異常系1
+- **例外/エラー処理表** (§5) の各エラーID `E00x` に対して1テスト以上
+- インタフェース定義 (§6) の各 I/F に対して入出力仕様どおりかのテスト1以上
+- 状態遷移 (§9) の各遷移 (ガード条件含む) に対して1テスト以上
 - 純粋な計算ロジックは入力境界値を網羅
 - UI バリデーション規則 (`ui-design.md`) があれば各規則に対し1テスト
 - DB スキーマ制約 (NOT NULL / UNIQUE / FK / CHECK) の違反パスを Repository 層で検証
@@ -180,7 +200,7 @@ model: inherit
 ## チェックリスト
 
 ### 3 層と 3 設計層の対応 (本フェーズの中核)
-- [ ] **単体テスト ↔ 詳細設計**: 詳細設計5ドキュメントの全要素 (サブ機能 / 例外 / 状態遷移 / UI バリデーション / DB スキーマ) が単体テストで網羅されている
+- [ ] **単体テスト ↔ 詳細設計**: `detailed-design.md` (+任意の ui/db) の全要素 (サブ機能 / 例外 / I/F / 状態遷移 / UI バリデーション / DB スキーマ) が単体テストで網羅されている
 - [ ] **結合テスト ↔ 基本設計**: 基本設計4ドキュメントの全要素 (システムアーキ I/F / 機能間連携 / コンポーネント境界 / データフロー) が結合テストで網羅されている
 - [ ] **E2E テスト ↔ 要件**: 要件定義書の全要件 (USDM `R-###` / ユースケース) が E2E テストで網羅されている (100%)
 

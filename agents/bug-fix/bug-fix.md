@@ -86,7 +86,7 @@ flowchart TD
 
 ### Step 1 : 原因調査 (Investigation) — **`bug-investigation` Agent の責務 (本 Agent はやらない)**
 
-原因調査は調査専門の **`bug-investigation` Agent** (修正手段を持たない) が独立して実施する。修正する者が調査すると「自分が直せる仮説」に観察が引き寄せられるため、調査と修正を分離している。
+原因調査は調査専門の **`bug-investigation` Agent** (修正を禁止する規律下で動く) が独立して実施する。修正する者が調査すると「自分が直せる仮説」に観察が引き寄せられるため、調査と修正を分離している。
 
 **本 Agent (bug-fix) がやること:**
 1. `bug.json` の `iterations[i].sub_phases.investigation` と調査レポート (`docs/05_bug_reports/<BID>-investigation-<N>.md`) を Read する

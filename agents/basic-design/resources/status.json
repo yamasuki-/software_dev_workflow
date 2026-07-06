@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.4",
+  "schema_version": "1.5",
   "feature_id": "F001",
   "name": "<機能名>",
   "summary": "<1〜2行で機能の概要>",
@@ -27,11 +27,13 @@
       "started_at": null,
       "completed_at": null,
       "subtasks": {
-        "ui_design":          { "status": "pending", "artifact": "docs/02_detailed_design/F001/ui-design.md" },
-        "functional_design":  { "status": "pending", "artifact": "docs/02_detailed_design/F001/functional-design.md" },
-        "state_transition":   { "status": "pending", "artifact": "docs/02_detailed_design/F001/state-transition.md" },
-        "db_design":          { "status": "pending", "artifact": "docs/02_detailed_design/F001/db-design.md" },
-        "sequence":           { "status": "pending", "artifact": "docs/02_detailed_design/F001/sequence.md" }
+        "overview_traceability": { "status": "pending", "artifact": "docs/02_detailed_design/F001/detailed-design.md", "sections": "1-2" },
+        "subfunctions":          { "status": "pending", "artifact": "docs/02_detailed_design/F001/detailed-design.md", "sections": "3-5" },
+        "interface_definition":  { "status": "pending", "artifact": "docs/02_detailed_design/F001/detailed-design.md", "sections": "6" },
+        "sequence":              { "status": "pending", "artifact": "docs/02_detailed_design/F001/detailed-design.md", "sections": "7-8" },
+        "state_transition":      { "status": "pending", "artifact": "docs/02_detailed_design/F001/detailed-design.md", "sections": "9" },
+        "ui_design":             { "status": "pending", "optional": true, "artifact": "docs/02_detailed_design/F001/ui-design.md" },
+        "db_design":             { "status": "pending", "optional": true, "artifact": "docs/02_detailed_design/F001/db-design.md" }
       },
       "review": {
         "status": "pending",

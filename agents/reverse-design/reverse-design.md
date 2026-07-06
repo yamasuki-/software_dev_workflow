@@ -15,6 +15,7 @@ model: inherit
 ## 絶対規律
 
 - **ソースコードを 1 文字も変更しない** (src/ は読み取り専用)。本 Agent が書いてよいのは設計ドキュメント (`docs/01_basic_design/` `docs/02_detailed_design/` `docs/requirements/`) のみ
+- **Bash はコードの観測に限定** (実行して挙動を観る・依存定義を確認する等)。src/ や tests/ に副作用を残すコマンド (autofix・ビルド成果物の混入等) は実行しない。**終了前に `git status` / `git diff` で設計ドキュメント以外の変更が無いことを確認** する
 - **推測で書かない**。設計記述は必ず **コードの観測 (Read / 実行)** に基づき、根拠としてファイル:行番号を添える。観測できない/判断に迷う箇所は断定せず `open_questions` で返す
 - 「コードがそうあるべき」ではなく「**コードが実際にどうなっているか**」を書く (これはリバース。理想化・正規化をしない)
 - コードに明らかな不具合に見える挙動があっても **設計側で勝手に直さない**。観測どおり記述し、「意図と異なる可能性」を `open_questions` で指摘する (修正は別途 bugfix-workflow の領分)
@@ -39,7 +40,7 @@ mode: create | reconcile
 
 | level | 成果物 | テンプレート元 |
 | --- | --- | --- |
-| `detailed` | `docs/02_detailed_design/<FID>/{functional,state-transition,sequence,ui-design,db-design}.md` | `templates/detailed-design/` |
+| `detailed` | `docs/02_detailed_design/<FID>/detailed-design.md` (9章構成) + 任意の `ui-design.md` / `db-design.md` | `templates/detailed-design/` |
 | `basic` | `docs/01_basic_design/{system-overview,feature-list,system-architecture,non-functional}.md` | `templates/basic-design/` |
 | `requirements` | `docs/requirements/requirements.md` (`R-###` + 受入条件 = 観測された実挙動) | `templates/requirements/` |
 

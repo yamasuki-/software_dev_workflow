@@ -18,7 +18,7 @@
 | `java-spring-boot`         | Java 21 + Spring Boot 3.4 + Spring Data JPA         | JUnit 5, AssertJ, Mockito, Testcontainers, Spotless, Flyway |
 | `ruby-rails`               | Ruby 3.4 + Rails 8.x + Hotwire                      | RSpec, FactoryBot, Capybara + Cuprite, RuboCop, Brakeman, SimpleCov |
 
-## 1 セットの中身 (7 ファイル)
+## 1 セットの中身 (9 ファイル)
 
 各プリセットは以下のファイル構成で統一されている。
 そのまま `.dev-workflow/rules/stack/` にコピーして使う。
@@ -141,7 +141,7 @@ cp "$PRESET_DIR"/*.md "$PROJECT_ROOT/.dev-workflow/rules/stack/"
 ここに無いスタックを使う場合 (例: ASP.NET Core, Kotlin Spring, Flutter):
 
 1. 既存プリセットのうち最も近いものを丸ごとコピーし、別名のディレクトリに置く
-2. 7 ファイルすべてをそのスタック向けに書き換える
+2. 9 ファイルすべてをそのスタック向けに書き換える
 3. 共通フォーマット (`ADD` / `OVERRIDE` / `DISABLE` / `ADDITIONAL_ARTIFACTS` / `REVIEW_EXTRAS`) は維持
 4. 本 README の表に追記
 

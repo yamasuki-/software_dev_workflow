@@ -74,7 +74,7 @@ model: inherit
 
 ### Step 3 : 機能分割のガイドライン
 
-- 1機能の粒度: 「詳細設計5種・テスト設計3種を1〜2セッションで作成できる」程度。多くなりすぎる時は分割。
+- 1機能の粒度: 「詳細設計 (9章構成の detailed-design.md)・テスト設計3種を1〜2セッションで作成できる」程度。多くなりすぎる時は分割。
 - 機能名は名詞句で短く (例: 「ユーザ登録」「在庫検索」「請求書PDF生成」)。
 - 機能間の依存関係は `depends_on` に書き、可能な限り少なくする。
 - カバレッジマップを必ず埋め、全要件IDがいずれかの機能IDでカバーされていることを確認。漏れがあれば機能を追加。
@@ -102,7 +102,7 @@ model: inherit
 1. `project.json` を更新:
    - `features` 配列に、機能一覧の各機能を `{id, name, summary, priority, depends_on}` で追加
    - `current_phase` は **まだ `detailed_design` に進めない** (basic-design-review の pass を待つ)
-2. 各機能について、本スキルディレクトリ配下の `resources/feature.json` をコピーして `.dev-workflow/features/<FID>/status.json` を作成。`feature_id`, `name`, `summary`, `depends_on`, タイムスタンプを埋める。
+2. 各機能について、本スキルディレクトリ配下の `resources/status.json` (機能別状態ファイルのテンプレート) をコピーして `.dev-workflow/features/<FID>/status.json` を作成。`feature_id`, `name`, `summary`, `depends_on`, タイムスタンプを埋める。
 3. `phases.basic_design.status = "completed"` （各機能の status.json でも）。
 4. 戻り値で「basic-design-review を spawn してほしい」とオーケストレータに伝える。
 

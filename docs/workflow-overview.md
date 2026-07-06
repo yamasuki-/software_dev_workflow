@@ -18,7 +18,7 @@ flowchart TD
     Orch -. spawn .-> TstA["testing Agent"]
     Orch -. spawn .-> BIA["bug-investigation Agent<br/>調査専門・修正禁止"]
     Orch -. spawn .-> BugA["bug-fix Agent"]
-    Orch -. spawn .-> RevA["*-review Agents (9)<br/>requirements-review / security-review 含む"]
+    Orch -. spawn .-> RevA["*-review Agents (11)<br/>requirements-review / security-review 含む"]
     RQA & BDA & DDA & TDA & TIA & TR & AC & ImpA & TstA & BugA & RevA <-->|"read/write"| FS[(".dev-workflow/<br/>docs/<br/>src/<br/>tests/")]
     Orch <-. read .-> FS
 ```
@@ -258,14 +258,14 @@ flowchart TD
 | ------------------------ | --------------------------------------------------------------- | ---- |
 | 要件入力                 | `docs/requirements/requirements.md`                             | md   |
 | 基本設計                 | `docs/01_basic_design/{system-overview, feature-list, system-architecture, non-functional}.md` | md + Mermaid |
-| 詳細設計 (機能毎)        | `docs/02_detailed_design/<FID>/{ui-design, functional-design, state-transition, db-design, sequence}.md` | md + Mermaid |
+| 詳細設計 (機能毎)        | `docs/02_detailed_design/<FID>/detailed-design.md` (9章構成) + 任意の `ui-design.md` / `db-design.md` | md + Mermaid |
 | テスト設計 (機能毎)      | `docs/03_test_design/<FID>/{unit-test, integration-test, e2e-test}.md` | md   |
 
 ### テスト 3 層と設計 3 層の対応 (test-design / test-design-review の中核ルール)
 
 | テスト層 | 検証対象 (インプット)    | 確認すること                                          |
 | -------- | ------------------------ | ---------------------------------------------------- |
-| 単体     | **詳細設計** 5 ドキュメント | 機能内部の振る舞いが詳細設計どおりに動くこと          |
+| 単体     | **詳細設計** `detailed-design.md` (+任意の ui/db) | 機能内部の振る舞いが詳細設計どおりに動くこと          |
 | 結合     | **基本設計** 4 ドキュメント | 機能間連携・アーキ要件が基本設計どおりに繋がること   |
 | E2E      | **要件定義書** (USDM `R-###` / ユースケース) | システムが要件を満たすこと (要件カバレッジ 100% 必須) |
 
@@ -273,7 +273,7 @@ flowchart TD
 | テストコード (機能毎)    | `tests/{unit,integration,e2e}/<FID>/...` (プロジェクト固有)    | コード |
 | Red 確認ログ (機能毎)    | `docs/04_test_results/<FID>/*.md` の Red 確認セクション         | md   |
 | 実装                     | `src/...` (プロジェクト固有)                                   | コード |
-| セキュリティ所見 (機能毎) | `docs/07_security/<FID>/findings.md`                          | md   |
+| セキュリティ所見 (機能毎) | `docs/08_security/<FID>/findings.md`                          | md   |
 | テスト実行 (機能毎)      | `docs/04_test_results/<FID>/{unit-test-result, integration-test-result, e2e-test-result}.md` | md   |
 | 不具合票                 | `docs/05_bug_reports/B<番号>.md`                               | md   |
 | レビュー票               | `docs/06_reviews/<basic | <FID>/<phase>>-review.md`            | md   |

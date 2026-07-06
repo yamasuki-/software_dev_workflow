@@ -73,7 +73,7 @@ flowchart TD
 
 各設計層 `L` (detailed/basic/requirements、対応 layer = unit/integration/e2e) で:
 
-1. **テスト仕様書を作る**: `Task(subagent_type="test-design", ...)` を spawn。**検証対象の設計ドキュメントから** 当該 layer のテストケース (期待入出力) を起こす。期待値は設計の主張をそのまま使う
+1. **テスト仕様書を作る**: `Task(subagent_type="test-design", ...)` を spawn。ブリーフに **`mode: characterization`** と `layer` を必ず含める (test-design Agent の §「実行モード」参照。forward の TDD Red 前提を無効化し、Step 5/6 をスキップさせるため)。**検証対象の設計ドキュメントから** 当該 layer のテストケース (期待入出力) を起こす。期待値は設計の主張をそのまま使う (コードを覗いて決めるのは禁止)
 2. **適合性テストを作って実行**: `Task(subagent_type="conformance-test", ...)` を spawn (layer 指定)。テスト仕様の期待値を encode したテストを **既存コードに対して実行**
 3. **判定**:
    - `conformant` (全 PASS) → 設計は実コードと一致。次へ

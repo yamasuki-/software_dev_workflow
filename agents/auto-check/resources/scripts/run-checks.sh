@@ -81,7 +81,7 @@ START_AT=$(now)
 # Default report path
 if [ -z "$OUT" ]; then
   if [ "$MODE" = "cross" ]; then
-    OUT_DIR="$PROJECT_ROOT/docs/06_reviews/cross"
+    OUT_DIR="$PROJECT_ROOT/docs/06_reviews/_cross"
   else
     OUT_DIR="$PROJECT_ROOT/docs/06_reviews/$TARGET"
   fi

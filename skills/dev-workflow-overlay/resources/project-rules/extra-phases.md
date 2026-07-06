@@ -49,7 +49,7 @@ position: after security_review
 skill: a11y-review
 project_local: yes
 gating: blocks_next_phase_on_fail
-artifact_path: docs/08_a11y/<FID>/
+artifact_path: docs/09_a11y/<FID>/
 description: 実装後にアクセシビリティ観点 (WCAG/キーボード操作/コントラスト) の専門レビューを行う
 ```
 
@@ -61,7 +61,7 @@ position: after testing_review
 skill: performance-baseline
 project_local: yes
 gating: warn_only_on_fail
-artifact_path: docs/08_performance/<FID>/
+artifact_path: docs/10_performance/<FID>/
 description: 機能完了時のパフォーマンス基準値を記録する (劣化があれば警告のみ)
 ```
 
@@ -73,7 +73,7 @@ position: before testing
 skill: a11y-check
 project_local: yes
 gating: blocks_next_phase_on_fail
-artifact_path: docs/09_a11y/<FID>/
+artifact_path: docs/11_a11y_check/<FID>/
 description: WCAG 2.1 AA 準拠を確認 (UIあり機能のみ)
 ```
 

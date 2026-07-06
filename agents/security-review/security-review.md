@@ -21,7 +21,7 @@ model: inherit
 - レビュー票:
   - `per_feature`: `docs/06_reviews/<FID>/security-review-per-feature.md`
   - `cross`: `docs/06_reviews/_cross/security-cross-review.md`
-- 詳細な脆弱性所見 (再現条件・PoC・修正方針) は `docs/07_security/<FID>/findings.md` に追記する。
+- 詳細な脆弱性所見 (再現条件・PoC・修正方針) は `docs/08_security/<FID>/findings.md` に追記する。
 
 ## ゲートとしての位置づけ (ブロッキング)
 
@@ -54,7 +54,7 @@ model: inherit
 | インプット                                              | アウトプット (検証対象)                       |
 | ------------------------------------------------------- | --------------------------------------------- |
 | `docs/01_basic_design/non-functional.md` (セキュリティ要件) | `src/...` (プロダクトコード)                  |
-| `docs/02_detailed_design/<FID>/*.md` (特に functional-design / db-design / sequence) | 認証・認可・入力検証・データアクセス層         |
+| `docs/02_detailed_design/<FID>/detailed-design.md` (特に §5 サブ機能詳細 / §6 I/F / §7-8 シーケンス) + 任意の db-design | 認証・認可・入力検証・データアクセス層         |
 | 依存定義ファイル (`package.json` / `requirements.txt` / `go.mod` / `Gemfile` / `pom.xml` 等) | 依存ライブラリと既知脆弱性                     |
 | auto-check のセキュリティスキャン結果                   | 設定ファイル・環境変数の扱い                  |
 
@@ -63,7 +63,7 @@ model: inherit
 ### 個別チェック (mode = per_feature) — 単一機能を検証
 
 #### A. OWASP Top 10 観点 (機能内のコード)
-- [ ] **A01 アクセス制御の不備**: 認可チェックが全エンドポイント/操作で行われ、IDOR (他人のリソース ID 指定で参照/更新可) が防がれているか。`sequence.md` の認可ステップがコードに反映されているか
+- [ ] **A01 アクセス制御の不備**: 認可チェックが全エンドポイント/操作で行われ、IDOR (他人のリソース ID 指定で参照/更新可) が防がれているか。`detailed-design.md` §8 シーケンス図の認可ステップがコードに反映されているか
 - [ ] **A02 暗号化の失敗**: 機微データ (パスワード/トークン/個人情報) が適切なアルゴリズムでハッシュ/暗号化されているか (パスワードは bcrypt/argon2 等、MD5/SHA1 単体は不可)。通信路の TLS 前提が崩れていないか。トークン/セッションID/ワンタイムコード等の生成に CSPRNG (`secrets` / `crypto.randomBytes` / `SecureRandom` 等) を使い、`Math.random` / `rand` 等の予測可能な乱数を使っていないか
 - [ ] **A03 インジェクション**: SQL/NoSQL/OS コマンド/LDAP において、文字列連結ではなくパラメータ化クエリ/プリペアドステートメント/安全な API が使われているか。テンプレートの自動エスケープが無効化されていないか
 - [ ] **A04 安全でない設計**: レート制限・ロックアウト・多段認可など設計レベルの防御が実装されているか
@@ -76,7 +76,7 @@ model: inherit
 
 #### B. 入力検証・出力エンコーディング
 - [ ] 全外部入力 (リクエストボディ/クエリ/ヘッダ/ファイル) にサーバ側バリデーションがあるか (クライアント検証だけに依存していない)
-- [ ] `ui-design.md` / `functional-design.md` のバリデーション仕様がサーバ側で実装されているか
+- [ ] `detailed-design.md` §5 / `ui-design.md` (UIあり) のバリデーション仕様がサーバ側で実装されているか
 - [ ] 出力先 (HTML/JSON/SQL/シェル) に応じたエスケープ/エンコードが行われ XSS を防いでいるか
 - [ ] ファイルアップロードの拡張子/MIME/サイズ/保存先パス (パストラバーサル防止) が検証されているか
 - [ ] **CSRF 対策**: 状態変更系リクエスト (POST/PUT/DELETE) に CSRF トークン検証 (またはフレームワークの CSRF 保護有効化) があるか。Cookie 属性 (SameSite) だけに依存していないか
@@ -97,8 +97,8 @@ model: inherit
 - [ ] 要件 ↔ 実装の対応表を作り、未充足があれば所見に記録
 
 #### E. detailed-design との整合 (セキュリティ観点)
-- [ ] `functional-design.md` のエラー処理が、攻撃者に内部情報を与えない形 (汎用エラーメッセージ) になっているか
-- [ ] `db-design.md` の機微カラムに対する保護 (暗号化/マスキング/アクセス制御) が実装されているか
+- [ ] `detailed-design.md` §5 のエラー処理が、攻撃者に内部情報を与えない形 (汎用エラーメッセージ) になっているか
+- [ ] `db-design.md` の機微カラムに対する保護 (暗号化/マスキング/アクセス制御) が実装されているか (DBあり)
 - [ ] 設計に無い「裏口」エンドポイント/デバッグ機能/認可スキップが紛れ込んでいないか
 
 #### F. ビジネスロジック悪用・DoS 耐性
@@ -155,7 +155,7 @@ model: inherit
 3. アウトプット (プロダクトコード) を Read / Grep。秘密情報・危険な関数呼び出しは Grep パターンで横断走査する。
 4. auto-check のセキュリティスキャン結果を Read し、検出済み項目を取り込む (再スキャンはしない)。`Bash` は読み取り専用の補助走査 (例: 依存定義の確認、`grep -r` 相当) に限定し、コードの改変・テスト実行はしない。
 5. mode に応じてチェックリスト (per_feature=A〜G / cross=H〜K) を逐項目で判定。G (LLM) と K (インフラ) は対象が存在しない場合「該当なし」と明記してスキップ可。
-6. 検出した所見を重大度 (Critical/High/Medium/Low/Info) で分類し、再現条件・該当箇所・修正方針を `docs/07_security/<FID>/findings.md` に記録。
+6. 検出した所見を重大度 (Critical/High/Medium/Low/Info) で分類し、再現条件・該当箇所・修正方針を `docs/08_security/<FID>/findings.md` に記録。
 7. `resources/review.md` からレビュー票を生成 (per_feature/cross で保存先を分ける)。
 8. `status.json` の `phases.implementation.security_review.<mode>` を更新。
 9. 戻り値を返す。

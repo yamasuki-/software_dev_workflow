@@ -47,7 +47,7 @@ model: inherit
 
 | テスト層 | 検証対象 (インプット)       |
 |---------|----------------------------|
-| 単体    | **詳細設計** 5 ドキュメント   |
+| 単体    | **詳細設計** `detailed-design.md` (9章構成) + 任意の ui/db |
 | 結合    | **基本設計** 4 ドキュメント   |
 | E2E     | **要件定義書** (USDM `R-###` / ユースケース) |
 
@@ -70,7 +70,7 @@ model: inherit
 
 | テスト層 | 検証する対応関係 | インプット (設計層) | アウトプット (テスト設計) |
 |---|---|---|---|
-| 単体 | テスト ↔ **詳細設計** | `docs/02_detailed_design/<FID>/functional-design.md` / `state-transition.md` / `sequence.md` / `ui-design.md` / `db-design.md` | `docs/03_test_design/<FID>/unit-test.md` |
+| 単体 | テスト ↔ **詳細設計** | `docs/02_detailed_design/<FID>/detailed-design.md` (9章構成) + 任意の `ui-design.md` / `db-design.md` | `docs/03_test_design/<FID>/unit-test.md` |
 | 結合 | テスト ↔ **基本設計** | `docs/01_basic_design/system-overview.md` / `feature-list.md` / `system-architecture.md` / `non-functional.md` | `docs/03_test_design/<FID>/integration-test.md` |
 | E2E | テスト ↔ **要件** | `docs/requirements/requirements.md` (USDM の場合は `R-###` / `S-###-##` 一覧) | `docs/03_test_design/<FID>/e2e-test.md` |
 
@@ -80,11 +80,12 @@ model: inherit
 
 ### A. 単体テストの網羅 (検証対象 = **詳細設計**)
 
-> 「単体テストは詳細設計の内容を検証する」が本層の責務。詳細設計5ドキュメントの全要素が単体テストで網羅されているか確認する。
+> 「単体テストは詳細設計の内容を検証する」が本層の責務。`detailed-design.md` (+任意ドキュメント) の全要素が単体テストで網羅されているか確認する。
 
-- [ ] 機能設計の **各サブ機能** に対し単体テストが少なくとも 「正常系1 + 境界値1 + 異常系1」 ある
-- [ ] 機能設計の **各エラーID (`E###`)** に対し単体テストが少なくとも1件ある
-- [ ] 状態遷移の **各遷移 (ガード条件含む)** に対し単体テストが少なくとも1件ある
+- [ ] **各サブ機能** (§5) に対し単体テストが少なくとも 「正常系1 + 境界値1 + 異常系1」 ある
+- [ ] **各エラーID (`E###`)** (§5) に対し単体テストが少なくとも1件ある
+- [ ] **各 I/F** (§6) の入出力仕様に対し単体テストが少なくとも1件ある
+- [ ] 状態遷移 (§9) の **各遷移 (ガード条件含む)** に対し単体テストが少なくとも1件ある
 - [ ] 純粋計算ロジック (数値・境界条件) の境界値網羅
 - [ ] UI バリデーション規則 (`ui-design.md`) があれば各規則に対し単体テストが少なくとも1件
 - [ ] DB スキーマ制約 (NOT NULL / UNIQUE / FK / CHECK) の違反パスが Repository 層で検証されている
@@ -153,7 +154,7 @@ model: inherit
 ## 手順
 
 1. **インプット (3 層別)** を Read:
-   - 単体検証用 → 詳細設計5ドキュメント
+   - 単体検証用 → 詳細設計 `detailed-design.md` (+任意の ui/db)
    - 結合検証用 → 基本設計4ドキュメント
    - E2E 検証用 → 要件定義書 (USDM `R-###` / ユースケース)
 2. アウトプット (テスト設計3ドキュメント) を Read。

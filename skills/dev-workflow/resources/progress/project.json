@@ -27,7 +27,6 @@
   "checkpoints": {
     "requirements": {
       "status": "pending",
-      "enabled": true,
       "approved_at": null,
       "skipped_at": null,
       "approval_notes": null,
@@ -35,7 +34,6 @@
     },
     "basic_design": {
       "status": "pending",
-      "enabled": true,
       "approved_at": null,
       "skipped_at": null,
       "approval_notes": null,
@@ -43,7 +41,6 @@
     },
     "detailed_design": {
       "status": "pending",
-      "enabled": true,
       "approved_at": null,
       "skipped_at": null,
       "approval_notes": null,

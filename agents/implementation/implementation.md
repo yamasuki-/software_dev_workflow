@@ -57,7 +57,7 @@ flowchart LR
 
 ## 前提
 
-- 詳細設計 (5種) と テスト設計 (3種) が `completed`
+- 詳細設計 (`detailed-design.md` 9章構成 + 任意の ui/db) と テスト設計 (3種) が `completed`
 - `test_implementation` フェーズが `completed` で、各層の `red_confirmed = true`
 - 言語/FW/テストランナーが `decisions.md` で確定済み
 
@@ -78,7 +78,7 @@ flowchart LR
 
 - **モデル/データ層** (DBスキーマ、マイグレーション、ORMモデル) — 1タスク以上
 - **永続化/リポジトリ層** (CRUD、クエリ) — サブ機能ごとに1タスク
-- **ドメインロジック層** (functional-design のサブ機能 / 計算 / 状態遷移) — サブ機能ごとに1タスク
+- **ドメインロジック層** (detailed-design §5 のサブ機能 / 計算 / §9 の状態遷移) — サブ機能ごとに1タスク
 - **API/コントローラ層** — エンドポイント or ユースケースごとに1タスク
 - **UI/フロント層** (UIあり) — 画面ごとに1タスク以上
 - **配線・設定** (DI、ルーティング、環境変数) — 1タスク
