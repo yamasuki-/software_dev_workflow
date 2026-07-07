@@ -25,9 +25,14 @@ detailed_design               detailed_design_review
 test_design                   test_design_review
 test_implementation           test_implementation_review
 implementation                implementation_review
-testing                       testing_review
+testing                       unit_test_review / integration_test_review / e2e_test_review
+                              testing_review (= e2e_test_review の cross pass 後。下記注参照)
 bug_fix                       bug_fix_review
 ```
+
+> **注 (testing 3 層化に伴う解決規則)**: testing のレビューは層別の 3 Agent (unit / integration / e2e) に分かれている。
+> - `after <layer>_test_review` = 当該層の cross review pass かつ open_bugs = 0 の直後
+> - `after testing_review` = **e2e_test_review の cross pass 後 (= testing フェーズ完了直前)** と解釈する (後方互換のための別名)
 
 ### gating
 - `blocks_next_phase_on_fail`: 通常のレビューゲートと同じ。fail なら次に進まない

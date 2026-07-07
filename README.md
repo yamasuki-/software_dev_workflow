@@ -2,6 +2,8 @@
 
 要件定義から不具合修正までを一貫したプロセスで進めるための、Claude Code (CLI / VS Code 拡張) 向けスキル群。Cowork では **制約付きで動作する** (Cowork の Agent ツールにはカスタム subagent_type が登録されないため、サブエージェントは general-purpose フォールバックで起動する。§「補足: Cowork で使う場合」参照)。
 
+> **本 README の位置づけ**: 仕様の記述は概要 (ダイジェスト) であり、**正 (single source of truth) は各 `SKILL.md`・`agents/<name>/<name>.md`・`skills/dev-workflow/resources/reference/`**。README と乖離している場合はそちらが正。README 側を編集するときは転記元とセットで更新すること。
+
 ## 特徴
 
 - **オーケストレータ＋サブエージェント方式**: `dev-workflow` がオーケストレータとして長期コンテキストを保持し、各フェーズの実作業は **別エージェント (サブエージェント)** として spawn する。コンテキストが肥大化しにくい。
@@ -129,16 +131,28 @@ flowchart LR
 
 このスキルセットの構成 (`$REPO_ROOT` 配下):
 
+> 注: このツリーは概要であり、正は実ディレクトリ構成。乖離を見つけたらツリー側を直すこと。
+
 ```
 $REPO_ROOT/
 ├─ README.md
-├─ docs/                                       # ワークフロー全体ドキュメント
+├─ .gitignore
+├─ tools/                                      # リポジトリ保守ツール (インストール対象外)
+│  └─ sync-preamble.py                         # Agent 共通前文の検証・一括同期 (--check / --fix)
+├─ docs/                                       # ワークフロー全体ドキュメント + 精査レポート
 │  └─ workflow-overview.md
 ├─ skills/                                     # Skill (ユーザ起動の入口)。~/.claude/skills/ にインストール
 │  ├─ dev-workflow/
 │  │  ├─ SKILL.md
 │  │  └─ resources/
-│  │     └─ progress/{project.json, open-questions.md, decisions.md}
+│  │     ├─ progress/{project.json, open-questions.md, decisions.md}
+│  │     └─ reference/                         # SKILL.md から参照される詳細仕様 (progressive disclosure)
+│  │        ├─ review-gates.md
+│  │        ├─ git-integration.md
+│  │        ├─ human-checkpoint.md
+│  │        ├─ testing-gates.md
+│  │        ├─ auto-check-gate.md
+│  │        └─ bugfix-design-handoff.md
 │  ├─ bugfix-workflow/{SKILL.md}                # 不具合修正の軽量ワークフロー (TDD)
 │  ├─ feature-add-workflow/{SKILL.md}           # 機能追加の軽量ワークフロー (TDD)
 │  ├─ reverse-design-workflow/{SKILL.md}        # リバース設計ワークフロー (コード→設計)
@@ -219,6 +233,12 @@ python tools/sync-preamble.py --fix     # 正本の内容で一括更新 (Agent 
 ```
 
 前文は full (通常 Agent 21 個) / readonly (調査・提案・逆生成系 5 個: code-survey / conformance-test / current-analysis / reverse-design / solution-proposal) の 2 変種のみ。各 Agent の前文を個別に直接編集しないこと。
+
+チェックの実行忘れを防ぐため、pre-commit フック (`tools/githooks/pre-commit`: 前文整合 + テンプレ JSON 構文 + 旧表記再混入の 3 チェック) を用意している。リポジトリで一度だけ以下を実行すると有効になる:
+
+```bash
+git config core.hooksPath tools/githooks
+```
 
 > 旧バージョンとの互換性メモ: 旧構成では 18 個すべてが `skills/` 配下にあったが、Skill (2) と Agent (16) に分離した (その後 `security-review` / `requirements` / `requirements-review` を追加、`test-run` を `testing` に統合、`bug-investigation` / `current-analysis` / `solution-proposal` / `code-survey` / `reverse-design` / `conformance-test` と派生 Skill (`bugfix-workflow` / `feature-add-workflow` / `reverse-design-workflow`) を追加し、現在 Skill 5 / Agent 26)。古い `skills/<phase>/` 等が残っている場合は手動で削除して `~/.claude/agents/` 側に揃えること。
 

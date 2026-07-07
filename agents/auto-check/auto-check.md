@@ -158,7 +158,8 @@ project_root:     <PROJECT_ROOT 絶対パス>
 }
 ```
 
-cross モードの場合は `<PROJECT_ROOT>/.dev-workflow/project.json` の `cross_auto_check.<phase>` に同等の block を書く。
+- **phase=testing の場合** は層別に `phases.testing.layers.<layer>.auto_check` を更新する (schema 1.6 で層ごとに定義)。
+- cross モードの場合は `<PROJECT_ROOT>/.dev-workflow/project.json` の `cross_auto_check.<phase>` に同等の block を書く (テンプレ schema 1.1 で `{}` として定義済み)。
 
 ### Step 6: 終了サマリ
 

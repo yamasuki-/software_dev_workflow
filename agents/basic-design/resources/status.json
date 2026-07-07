@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.5",
+  "schema_version": "1.6",
   "feature_id": "F001",
   "name": "<機能名>",
   "summary": "<1〜2行で機能の概要>",
@@ -14,6 +14,7 @@
       "started_at": null,
       "completed_at": null,
       "artifacts": [],
+      "auto_check": null,
       "review": {
         "status": "pending",
         "iteration": 0,
@@ -26,6 +27,7 @@
       "status": "pending",
       "started_at": null,
       "completed_at": null,
+      "auto_check": null,
       "subtasks": {
         "overview_traceability": { "status": "pending", "artifact": "docs/02_detailed_design/F001/detailed-design.md", "sections": "1-2" },
         "subfunctions":          { "status": "pending", "artifact": "docs/02_detailed_design/F001/detailed-design.md", "sections": "3-5" },
@@ -57,6 +59,7 @@
       "status": "pending",
       "started_at": null,
       "completed_at": null,
+      "auto_check": null,
       "subtasks": {
         "unit_test":        { "status": "pending", "artifact": "docs/03_test_design/F001/unit-test.md" },
         "integration_test": { "status": "pending", "artifact": "docs/03_test_design/F001/integration-test.md" },
@@ -85,6 +88,8 @@
       "started_at": null,
       "completed_at": null,
       "tdd_phase": "red",
+      "auto_check": null,
+      "test_run": null,
       "subtasks": {
         "unit_test": {
           "status": "pending",
@@ -128,6 +133,12 @@
       "tdd_phase": "green",
       "started_at": null,
       "completed_at": null,
+      "auto_check": null,
+      "test_run": null,
+      "security_review": {
+        "per_feature": null,
+        "cross": null
+      },
       "review": {
         "status": "pending",
         "per_feature": {
@@ -158,6 +169,7 @@
           "executed_at": null,
           "last_mode": null,
           "iteration": 0,
+          "auto_check": null,
           "open_bugs": [],
           "closed_bugs": [],
           "review": {
@@ -184,6 +196,7 @@
           "executed_at": null,
           "last_mode": null,
           "iteration": 0,
+          "auto_check": null,
           "open_bugs": [],
           "closed_bugs": [],
           "review": {
@@ -210,6 +223,7 @@
           "executed_at": null,
           "last_mode": null,
           "iteration": 0,
+          "auto_check": null,
           "open_bugs": [],
           "closed_bugs": [],
           "review": {
@@ -242,6 +256,11 @@
         "last_reviewed_at": null
       }
     }
+  },
+  "conformance": {
+    "unit": null,
+    "integration": null,
+    "e2e": null
   },
   "tasks": [],
   "notes": ""

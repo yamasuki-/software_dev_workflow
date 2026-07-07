@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# pre-commit — リポジトリ整合チェック (有効化: git config core.hooksPath tools/githooks)
+#
+# チェック内容:
+#   1. Agent 共通前文が正本 (tools/sync-preamble.py) と一致すること
+#   2. 状態テンプレート JSON (project.json / status.json / *.json) が構文正常であること
+#   3. 過去に統一済みの旧表記が再混入していないこと
+#
+# 失敗時は commit を中断する。緊急時は `git commit --no-verify` で回避できる。
+
+set -u
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT" || exit 2
+FAIL=0
+
+echo "[pre-commit] 1/3 Agent 前文の整合 (sync-preamble --check)"
+if ! python3 tools/sync-preamble.py --check; then
+  echo "  → NG: python3 tools/sync-preamble.py --fix で正本から一括反映できます" >&2
+  FAIL=1
+fi
+
+echo "[pre-commit] 2/3 テンプレート JSON の構文"
+for f in skills/dev-workflow/resources/progress/project.json \
+         agents/basic-design/resources/status.json \
+         agents/bug-fix/resources/bug.json \
+         agents/testing/resources/bug.json \
+         agents/implementation/resources/task.json; do
+  [ -f "$f" ] || continue
+  if ! python3 -m json.tool "$f" > /dev/null 2>&1; then
+    echo "  → NG: $f が JSON として不正" >&2
+    FAIL=1
+  fi
+done
+
+echo "[pre-commit] 3/3 旧表記の再混入チェック"
+PATTERN='06_reviews/cross|docs/07_security|feature\.json|修正手段を持たない'
+if git grep -nE "$PATTERN" -- 'agents' 'skills' 'README.md' 'CLAUDE.md' 'docs/workflow-overview.md' 2>/dev/null; then
+  echo "  → NG: 統一済みの旧表記が再混入しています (上記行を修正してください)" >&2
+  FAIL=1
+fi
+
+if [ "$FAIL" -ne 0 ]; then
+  echo "[pre-commit] チェック失敗のため commit を中断しました" >&2
+  exit 1
+fi
+echo "[pre-commit] OK"
+exit 0

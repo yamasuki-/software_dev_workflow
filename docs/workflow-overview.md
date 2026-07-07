@@ -260,6 +260,15 @@ flowchart TD
 | 基本設計                 | `docs/01_basic_design/{system-overview, feature-list, system-architecture, non-functional}.md` | md + Mermaid |
 | 詳細設計 (機能毎)        | `docs/02_detailed_design/<FID>/detailed-design.md` (9章構成) + 任意の `ui-design.md` / `db-design.md` | md + Mermaid |
 | テスト設計 (機能毎)      | `docs/03_test_design/<FID>/{unit-test, integration-test, e2e-test}.md` | md   |
+| テストコード (機能毎)    | `tests/{unit,integration,e2e}/<FID>/...` (プロジェクト固有)    | コード |
+| Red / Green 確認レポート (機能毎) | `docs/04_test_results/<FID>/<phase>-<red|green>-confirmation.md` | md   |
+| 実装                     | `src/...` (プロジェクト固有)                                   | コード |
+| セキュリティ所見 (機能毎) | `docs/08_security/<FID>/findings.md`                          | md   |
+| テスト実行 (機能毎)      | `docs/04_test_results/<FID>/{unit-test-result, integration-test-result, e2e-test-result}.md` | md   |
+| 不具合票                 | `docs/05_bug_reports/B<番号>.md`                               | md   |
+| auto-check レポート      | `docs/06_reviews/<FID>/<phase>-auto-check.md` (per_feature) / `docs/06_reviews/_cross/<phase>-auto-check.md` (cross) | md   |
+| レビュー票 (per_feature) | `docs/06_reviews/<FID>/<phase>-review-per-feature.md` (requirements / basic-design はプロジェクト単位で `docs/06_reviews/<phase>-review.md`) | md   |
+| レビュー票 (cross)       | `docs/06_reviews/_cross/<phase>-cross-review.md`               | md   |
 
 ### テスト 3 層と設計 3 層の対応 (test-design / test-design-review の中核ルール)
 
@@ -270,13 +279,6 @@ flowchart TD
 | E2E      | **要件定義書** (USDM `R-###` / ユースケース) | システムが要件を満たすこと (要件カバレッジ 100% 必須) |
 
 `test-design-review` はこの 3 層対応の網羅と双方向トレーサビリティを必須項目として判定する。
-| テストコード (機能毎)    | `tests/{unit,integration,e2e}/<FID>/...` (プロジェクト固有)    | コード |
-| Red 確認ログ (機能毎)    | `docs/04_test_results/<FID>/*.md` の Red 確認セクション         | md   |
-| 実装                     | `src/...` (プロジェクト固有)                                   | コード |
-| セキュリティ所見 (機能毎) | `docs/08_security/<FID>/findings.md`                          | md   |
-| テスト実行 (機能毎)      | `docs/04_test_results/<FID>/{unit-test-result, integration-test-result, e2e-test-result}.md` | md   |
-| 不具合票                 | `docs/05_bug_reports/B<番号>.md`                               | md   |
-| レビュー票               | `docs/06_reviews/<basic | <FID>/<phase>>-review.md`            | md   |
 
 ## 進捗管理ファイル
 

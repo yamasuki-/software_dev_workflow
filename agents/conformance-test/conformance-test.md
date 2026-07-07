@@ -71,7 +71,7 @@ test_command: <ランナーコマンド (任意。未指定なら stack-config.m
 
 ### Step 5 : 状態更新と戻り値
 
-`status.json` の該当 `phases.<...>.conformance.<layer>` を更新。
+`status.json` の `conformance.<layer>` (機能直下のフィールド。テンプレ schema 1.6 で `unit` / `integration` / `e2e` が `null` = 未実行で定義済み) を結果オブジェクトで更新。
 
 ```
 - verdict: conformant | mismatch | spec_incomplete

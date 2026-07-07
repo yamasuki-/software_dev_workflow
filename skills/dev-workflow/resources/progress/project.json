@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "project_name": "<プロジェクト名>",
   "project_root": "<プロジェクトルートの絶対パス>",
   "created_at": "<ISO8601>",
@@ -47,5 +47,6 @@
       "history": []
     }
   },
+  "cross_auto_check": {},
   "notes": ""
 }

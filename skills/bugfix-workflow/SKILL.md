@@ -30,6 +30,8 @@ description: 報告された不具合 1 件を「原因解析 (推測禁止) →
 - テンプレ解決順と初期化時の `.dev-workflow/templates/` 集約コピー
 - 3 段ゲート (auto-check → LLM レビュー) とレビュー回避の禁止
 
+なお、ベース SKILL.md の上記各節は要点のみで、**詳細手順はベースの `resources/reference/` に分割されている**。該当場面ではベース側の対応ファイルを Read してから実行すること (Git 統合 → `git-integration.md`、human-checkpoint → `human-checkpoint.md`、レビューゲート → `review-gates.md`、auto-check → `auto-check-gate.md`、testing/red-green → `testing-gates.md`、設計差し戻し → `bugfix-design-handoff.md`)。
+
 ## 入力 (必須 3 点)
 
 | 項目 | 内容 |
