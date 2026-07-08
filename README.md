@@ -313,57 +313,9 @@ git config core.hooksPath tools/githooks
 
 ## ワークフロー全体像
 
-詳しい流れは [docs/workflow-overview.md](./docs/workflow-overview.md) を参照。
+フロー図を含む全体像は **[docs/workflow-overview.md](./docs/workflow-overview.md) を参照** (requirements → 基本設計 → 詳細設計 → テスト設計 → テストコード (Red) → 実装 (Green) → セキュリティレビュー → 3 層テスト → 不具合修正の全フェーズ、human-checkpoint 3 箇所、auto-check → per_feature → cross の 3 段ゲート、red/green 確認、bug-investigation → bug-fix の分担を含む)。
 
-```mermaid
-flowchart TD
-    Req[要件定義書] --> BD[basic-design]
-    BD --> BDR{basic-design-review}
-    BDR -->|fail| BD
-    BDR -->|pass| FL[機能一覧 F001 F002 F003 COMMON]
-
-    FL --> DDBatch[detailed-design 全機能 並行 spawn]
-    DDBatch --> DDR1{detailed-design-review per_feature}
-    DDR1 -->|fail| DDBatch
-    DDR1 -->|all pass| DDR2{detailed-design-review cross}
-    DDR2 -->|fail| DDBatch
-    DDR2 -->|pass| TDBatch[test-design 全機能 並行]
-    TDBatch --> TDR1{test-design-review per_feature}
-    TDR1 -->|fail| TDBatch
-    TDR1 -->|all pass| TDR2{test-design-review cross}
-    TDR2 -->|fail| TDBatch
-    TDR2 -->|pass| TIBatch[test-implementation TDD Red 並行]
-    TIBatch --> TIR1{test-implementation-review per_feature}
-    TIR1 -->|fail| TIBatch
-    TIR1 -->|all pass| TIR2{test-implementation-review cross}
-    TIR2 -->|fail| TIBatch
-    TIR2 -->|pass| ImplBatch[implementation COMMON先行 各機能 TDD Green]
-    ImplBatch --> IR1{implementation-review per_feature}
-    IR1 -->|fail| ImplBatch
-    IR1 -->|all pass| IR2{implementation-review cross 重複検出}
-    IR2 -->|fail| ImplBatch
-    IR2 -->|pass| SR1{security-review per_feature<br/>OWASP/秘密情報/設定}
-    SR1 -->|fail| ImplBatch
-    SR1 -->|all pass| SR2{security-review cross<br/>依存脆弱性/横断一貫性}
-    SR2 -->|fail| ImplBatch
-    SR2 -->|pass| TestBatch[testing layer=unit→integration→e2e<br/>各層 直列 全機能 並行]
-    TestBatch --> TR1{<layer>-test-review per_feature<br/>(unit / integration / e2e)}
-    TR1 -->|fail| TestBatch
-    TR1 -->|all pass| TR2{<layer>-test-review cross}
-    TR2 -->|fail| TestBatch
-    TR2 -->|pass no fail| Final[最終レポート]
-    TR2 -->|pass with fail| Bug[bug-fix 5ステップ反復]
-    Bug --> BFR{bug-fix-review}
-    BFR -->|fail| Bug
-    BFR -->|pass_but_open| Bug
-    BFR -->|pass_and_verified| TestBatch
-```
-
-**レビューは 2 段ゲート:**
-1. **個別レビュー (per_feature)**: 機能ごとに並行 spawn。per-feature 内の整合を確認。全機能 pass を待つ
-2. **横断レビュー (cross)**: 全機能まとめて 1 回 spawn。命名統一・データ型整合・共通化機会を検証
-
-両方 pass しないと次フェーズに進めない。
+テキストでの要約: 各フェーズは **フェーズバッチ** (同じフェーズを全機能まとめて並行) で進み、フェーズ完了ごとに **auto-check (機械チェック) → per_feature レビュー → cross レビュー** の 3 段ゲートを通過しないと次に進めない。設計 3 フェーズの確定時はユーザ承認 (human-checkpoint) で停止する。
 
 ## 進捗状態の値
 
