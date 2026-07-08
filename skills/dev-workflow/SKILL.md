@@ -230,7 +230,7 @@ bug-investigation (調査) → bug-fix (バグごと反復) → bug-fix-review (
 ### 共通ルール
 
 - `subagent_type`: **対象 Agent の `name`** を渡す (例: `Task(subagent_type="basic-design", ...)`)。Claude Code が `~/.claude/agents/<name>/<name>.md` の system prompt を自動注入する。**`general-purpose` は使わない** (Agent 定義が見つからない環境でのフォールバックに限り、該当 Agent 定義ファイルを Read し、frontmatter を除く本文をブリーフ冒頭に貼り付けた上で `general-purpose` を使ってよい)
-- **Cowork ではこのフォールバックが標準経路** になる (Cowork の Agent ツールはカスタム subagent_type を受け付けないため)。フォールバック時は frontmatter の `tools` / `model` 制約が強制されないので、当該 Agent のツール制約 (例: 調査系の変更禁止) を **ブリーフに禁止事項として明記** すること。詳細は README §「補足: Cowork で使う場合」
+- **Cowork ではこのフォールバックが標準経路** になる (Cowork の Agent ツールはカスタム subagent_type を受け付けないため)。フォールバック時は frontmatter の `tools` / `model` 制約が強制されないので、当該 Agent のツール制約 (例: 調査系の変更禁止) を **ブリーフに禁止事項として明記** すること。詳細は リポジトリの USAGE.md「補足: Cowork で使う場合」
 - `description`: 3〜5語の短い説明 (例: "F001 詳細設計を作成")
 - `prompt`: **自己完結のブリーフ**。サブエージェントはこの会話履歴を見られないので、必要な情報すべてを含める。
 
