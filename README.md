@@ -137,6 +137,7 @@ flowchart LR
 $REPO_ROOT/
 ├─ README.md                                   # 概要・構成 (本ファイル)
 ├─ USAGE.md                                    # 使い方 (インストール〜運用・カスタマイズの手順集)
+├─ LICENSE                                     # MIT License
 ├─ .gitignore
 ├─ tools/                                      # リポジトリ保守ツール (インストール対象外)
 │  └─ sync-preamble.py                         # Agent 共通前文の検証・一括同期 (--check / --fix)
@@ -331,3 +332,7 @@ git config core.hooksPath tools/githooks
 - スキル群は **言語非依存** で設計されているため、実装フェーズで使う言語/フレームワーク/テストランナーはプロジェクト固有。`basic-design` の `system-architecture.md` または `decisions.md` で必ず決めること。
 - 設計ドキュメントは Markdown + Mermaid のみ。Word 等への変換は別途行う想定。
 - セッションが切り替わった場合、まず `.dev-workflow/project.json` を読むこと。スキルの状態はメモリではなくこのファイルにある。
+
+## ライセンス
+
+[MIT License](./LICENSE)
