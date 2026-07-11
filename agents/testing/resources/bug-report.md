@@ -70,29 +70,33 @@
 
 #### 2. 影響範囲の判定とハンドオフ (Impact Assessment & Handoff)
 
-> **bug-fix は設計を直接編集しない**。本 Step では分類のみを行い、必要なら該当する設計フェーズ (`basic-design` / `detailed-design`) に差し戻す。
-> 実際の設計修正と、そのレビュー (per_feature + cross) は **設計フェーズの責務**。
+> **bug-fix は要件・設計・テスト設計を直接編集しない**。本 Step では根本原因の混入工程の特定 (分類) と影響範囲の特定のみを行い、必要なら該当する上流工程 (`requirements` / `basic-design` / `detailed-design` / `test-design`) に差し戻す。
+> 実際の修正とそのレビュー、および下流工程の連鎖更新は **上流工程側・オーケストレータの責務**。
 > 「コードに設計外の振る舞いがある」場合も、設計に追記してよいかは設計フェーズに判断させる (勝手に追記禁止)。
 
-- 分類 (`classification`): 以下から1つ選ぶ
+- 分類 (`classification`): 以下から1つ選ぶ (迷う場合はより上流に倒す)
   - [ ] `code_bug_only`                  — 設計どおり。実装にバグがあるだけ → 差し戻しなし
-  - [ ] `design_error_detailed`          — 詳細設計に誤り → `detailed-design` 差し戻し
-  - [ ] `design_error_basic`             — 基本設計 (機能分割・アーキ・要件解釈) に誤り → `basic-design` 差し戻し
+  - [ ] `test_design_gap`                — 実装は設計どおり。テスト設計の観点漏れ → `test-design` 差し戻し (影響層)
+  - [ ] `design_error_detailed`          — 詳細設計に誤り → `detailed-design` 差し戻し → 下流 test-design 連鎖更新
+  - [ ] `design_error_basic`             — 基本設計 (機能分割・アーキ) に誤り → `basic-design` 差し戻し → 下流連鎖更新
   - [ ] `undocumented_behavior`          — コードに設計外の振る舞いがある → 該当設計フェーズで「入れるべきか」検証
-  - [ ] `requirements_misinterpretation` — 要件解釈ミス → `basic-design` まで戻し、必要なら要件もユーザ確認
-- 差し戻し先フェーズ (`target_phase`): none / `detailed_design` / `basic_design`
+  - [ ] `requirements_misinterpretation` — 要件の誤り・解釈ミス → `requirements` 差し戻し (要件修正はユーザ確認必須) → 下流連鎖更新
+- 差し戻し先フェーズ (`target_phase`): none / `test_design` / `detailed_design` / `basic_design` / `requirements`
 - 対象機能ID:
+- 影響範囲 (`impacted_FIDs` / `impacted_layers`):
+- 影響範囲の導出根拠 (`impact_basis`: 参照元コード / depends_on / 更新設計ファイル):
 - 判定根拠 (Step 1 のエビデンス):
 
 ##### 差し戻し結果 (`code_bug_only` 以外の場合のみ)
 
 - `design_rerun_completed_at`:
 - `design_review_per_feature_passed`: yes / no
-- `design_review_cross_passed`: yes / no
-- 更新された設計ドキュメント:
+- `design_review_cross_passed`: yes / no (requirements の場合は requirements-review + checkpoint)
+- 更新された要件/設計/テスト設計ドキュメント:
+- 下流工程の連鎖更新 (`downstream_rerun`: 各段の updated / skipped と根拠):
 - `decision_notes` (特に `undocumented_behavior` の判断):
   - [ ] 入れるべき → 設計を更新済み (Step 3 へ進む)
-  - [ ] 入れるべきでない → 設計は変更せず、当該コードを Step 4 で除去
+  - [ ] 入れるべきでない → 設計は変更せず、Step 3-0 で「振る舞いが存在しないこと」の再現テストを Red 確認後、Step 4 で当該コードを除去
 - `decisions.md` への追記: [ ] 実施済み
 
 #### 3. テスト設計＋テストコードの修正 (Test Design & Code Fix) — **TDD**
@@ -131,8 +135,8 @@
 > 順に実行する:
 > 1. 検出元のテストケース
 > 2. 反復のステップ3で追加・修正したテストケース
-> 3. 同一機能 (`<FID>`) の関連テスト全て (リグレッション)
-> 4. 影響を受け得る他機能のテスト (該当時)
+> 3. 同一機能 (`<FID>`) の関連テスト全て (リグレッション・3 層)
+> 4. 影響範囲のテスト — `impacted_FIDs` が非空なら必須 (影響機能 × 影響層。検出層より上位の層を含む)
 
 | 観点 | テストID群 | 結果 |
 | ---- | ---------- | ---- |

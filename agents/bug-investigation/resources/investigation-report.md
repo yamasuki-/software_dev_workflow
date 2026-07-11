@@ -30,10 +30,11 @@
 - 原因:
 - 観察からの導出 (なぜ推測ではないと言えるか):
 
-## 4. 分類の推奨
+## 4. 分類の推奨 (根本原因の混入工程)
 
-- suggested_classification: `code_bug_only` / `design_error_detailed` / `design_error_basic` / `undocumented_behavior` / `requirements_misinterpretation`
-- 理由 (エビデンス参照):
+- suggested_classification: `code_bug_only` / `test_design_gap` / `design_error_detailed` / `design_error_basic` / `undocumented_behavior` / `requirements_misinterpretation`
+- 混入工程 (要件 / 基本設計 / 詳細設計 / テスト設計 / 実装) と根拠 (エビデンス参照):
+- suspected_impact (影響が及びそうな機能ID・テスト層の候補と根拠):
 
 ## 5. 修正方針の推奨 (実装はしない)
 

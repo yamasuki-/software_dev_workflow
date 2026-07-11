@@ -350,11 +350,11 @@ Claude (オーケストレータ):
 ```
 
 反復のなかで:
-- **Step 1**: ログを仕込んで title="" のときバリデーションが効いていないことを観察 (推測ではなく)
-- **Step 2**: detailed-design.md §5 に title 必須/最小長を追記
+- **Step 1**: (bug-investigation が) ログを仕込んで title="" のときバリデーションが効いていないことを観察 (推測ではなく)
+- **Step 2**: 混入工程を `design_error_detailed` と特定し、影響範囲 (`impacted_FIDs`: なし、根拠つき) を記録 → detailed-design 差し戻しで §5 に title 必須/最小長を追記 (下流 test-design は差分なしのため skip を記録)
 - **Step 3**: 検出層 (integration) より細かい unit に新ケース `UT-F001-009` を追加 → 修正前 Fail を確認 (TDD)
 - **Step 4**: Pydantic モデルに `min_length=1` を追加
-- **Step 5**: 検出元 + 新規 + F001 リグレッション全件を実行 → 全 Pass → verified
+- **Step 5**: 検出元 + 新規 + F001 リグレッション全件 (3 層) を実行 (影響機能があればその層も必須実行) → 全 Pass → verified
 
 オーケストレータが `B001 -> verified` を確認し、testing を再走させて F001 が完全に Pass することを確認。
 
@@ -501,8 +501,8 @@ dev-workflow の bug-fix だけ使いたい。
 
 オーケストレータの応答 (概要):
 - `B007` を起票 (`.dev-workflow/features/F002/bugs/B007.json` + `docs/05_bug_reports/B007.md`)
-- `bug-fix` サブエージェントを spawn して 5ステップループ (原因調査 → 設計修正 → テスト設計＋コード修正 → コード修正 → テスト実施) を回す
-- 修正後、`testing` サブエージェントで F002 のリグレッションを実行
+- `bug-fix` サブエージェントを spawn して 5ステップループ (原因調査 → 混入工程 + 影響範囲の特定・必要なら上流工程へ差し戻し (下流は連鎖更新) → 再現テスト Red + 前工程補強 → コード修正 → テスト実施) を回す
+- 修正後、`testing` サブエージェントで F002 と影響範囲 (`impacted_FIDs`) のリグレッションを実行
 
 ---
 

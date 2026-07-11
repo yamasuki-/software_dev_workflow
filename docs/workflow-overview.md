@@ -208,39 +208,47 @@ flowchart LR
 - `implementation` のゴール: 失敗テストを **最小実装で Pass** させる (Green)、その後 Refactor
 - `implementation` の中で **新規テストを書くことは禁止** (必要なら test-implementation か bug-fix に戻る)
 
-## bug-fix の5ステップ反復ループ (設計差し戻し型)
+## bug-fix の5ステップ反復ループ (上流差し戻し型)
 
-**原因調査は `bug-investigation` Agent (修正禁止の調査専門) が独立実施** し、bug-fix は調査レポートを引き継いで Step 2 (影響範囲判定) から始める。修正者が調査すると「自分が直せる仮説」に観察が引き寄せられるため分離している。**bug-fix は設計を直接編集しない**。設計変更が必要な場合は該当設計フェーズ (`basic-design` / `detailed-design`) に差し戻し、そこの 2 段レビュー (per_feature + cross) を通って初めて設計が確定。bug-fix は調整役。
+原則: **不具合の原因を見つける → 根本原因が混入した最上流の工程を特定する → その工程からやり直して下流へ影響範囲を連鎖更新する → 影響範囲はすべてテストする**。
+
+**原因調査は `bug-investigation` Agent (修正禁止の調査専門) が独立実施** し、bug-fix は調査レポートを引き継いで Step 2 (混入工程 + 影響範囲の判定) から始める。修正者が調査すると「自分が直せる仮説」に観察が引き寄せられるため分離している。**bug-fix は要件・設計・テスト設計を直接編集しない**。上流の修正が必要な場合は該当工程 (`requirements` / `basic-design` / `detailed-design` / `test-design`) に差し戻し、その工程のレビューゲートを通し、さらに下流工程を影響範囲で連鎖更新して初めて確定。bug-fix は調整役。
 
 ```mermaid
 flowchart TD
     Start([不具合 open]) --> S1[Step 1 原因調査 推測禁止 エビデンス必須]
-    S1 --> S2[Step 2 影響範囲の判定とハンドオフ 分類のみ 直接編集禁止]
+    S1 --> S2[Step 2 混入工程の特定とハンドオフ<br/>影響範囲 impacted_FIDs も特定 直接編集禁止]
     S2 -->|code_bug_only| S3
-    S2 -->|design_error_detailed| HD[detailed-design 差し戻し 2段レビュー]
-    S2 -->|design_error_basic| HB[basic-design 差し戻し 2段レビュー]
+    S2 -->|test_design_gap| HT[test-design 差し戻し 影響層]
+    S2 -->|design_error_detailed| HD[detailed-design 差し戻し<br/>→ 下流 test-design 連鎖更新]
+    S2 -->|design_error_basic| HB[basic-design 差し戻し<br/>→ 下流 detailed / test-design 連鎖更新]
     S2 -->|undocumented_behavior| HC[該当設計フェーズが妥当性判定]
-    S2 -->|requirements_misinterpretation| HB
+    S2 -->|requirements_misinterpretation| HR[requirements 差し戻し ユーザ確認必須<br/>→ 下流 basic / detailed / test-design 連鎖更新]
+    HT --> S3
     HD --> S3
     HB --> S3
+    HR --> S3
     HC -->|入れる 設計更新| S3
-    HC -->|入れない コード除去| S4
-    S3[Step 3 前工程テスト設計修正 + テストコード追加 TDD]
+    HC -->|入れない 除去 除去確認テストを3-0で作る| S3
+    S3[Step 3 再現テスト確保 Red 必須<br/>+ 前工程テスト補強 TDD]
     S3 --> S4[Step 4 コード修正]
-    S4 --> S5[Step 5 テスト実施 検出元 追加分 リグレッション]
+    S4 --> S5[Step 5 テスト実施 検出元 追加分<br/>機能内リグレッション 3層 + 影響範囲 impacted_FIDs 必須]
     S5 -->|全 Pass| Verified([verified])
     S5 -->|Fail あり| S1
 ```
 
-**Step 2 の分類と差し戻し先:**
+**Step 2 の分類 (根本原因の混入工程。迷う場合はより上流に倒す):**
 
-| 分類                            | 差し戻し先                                  |
-| ------------------------------- | ------------------------------------------- |
-| `code_bug_only`                 | なし (Step 3 へ)                            |
-| `design_error_detailed`         | `detailed-design`                           |
-| `design_error_basic`            | `basic-design`                              |
-| `undocumented_behavior`         | 該当設計フェーズで「入れるべきか」判断       |
-| `requirements_misinterpretation`| `basic-design` (必要なら要件もユーザ確認)    |
+| 分類                            | 差し戻し先 (→ 下流連鎖更新)                                          |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `code_bug_only`                 | なし (Step 3 へ)                                                      |
+| `test_design_gap`               | `test-design` (影響層の差分更新のみ)                                  |
+| `design_error_detailed`         | `detailed-design` → test-design (影響層)                              |
+| `design_error_basic`            | `basic-design` → detailed-design → test-design (影響 FID × 影響層)    |
+| `undocumented_behavior`         | 該当設計フェーズで「入れるべきか」判断 (除去でも 3-0 の Red 確認必須)  |
+| `requirements_misinterpretation`| `requirements` (要件修正はユーザ確認必須) → basic → detailed → test-design |
+
+差し戻し先より下流の連鎖更新は影響範囲 (`impacted_FIDs` / `impacted_layers`) に縮退した差分更新で行い、差分が生じない段は skip 可 (根拠を `decisions.md` に記録)。影響範囲は Root Cause の参照元コード・`feature-list.md` の `depends_on`・更新設計ファイルから導出し `bug.json` に記録、Step 5 と verified 後の `testing (mode=retry)` で **必須で** テストされる。
 
 **前工程テスト設計修正の適用ルール (Step 3):**
 

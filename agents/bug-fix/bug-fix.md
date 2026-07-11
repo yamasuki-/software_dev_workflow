@@ -32,19 +32,22 @@ model: inherit
 flowchart TD
     Start([不具合 open]) --> S1
     S1[1 原因調査<br/>bug-investigation Agent が独立実施<br/>エビデンス必須 推測禁止] --> S2
-    S2[2 影響範囲の判定とハンドオフ<br/>分類のみ 設計編集はしない]
+    S2[2 影響範囲の判定とハンドオフ<br/>根本原因の混入工程 + 影響 FID を特定<br/>分類のみ 設計編集はしない]
     S2 -->|code_bug_only| S3
-    S2 -->|design_error_detailed| HOdetailed[detailed-design 差し戻し → 2段レビュー]
-    S2 -->|design_error_basic| HObasic[basic-design 差し戻し → 2段レビュー]
+    S2 -->|test_design_gap| HOtest[test-design 差し戻し → レビュー]
+    S2 -->|design_error_detailed| HOdetailed[detailed-design 差し戻し → 2段レビュー<br/>→ 下流 test-design 連鎖更新]
+    S2 -->|design_error_basic| HObasic[basic-design 差し戻し → レビュー<br/>→ 下流 detailed-design / test-design 連鎖更新]
     S2 -->|undocumented_behavior| HOcheck[該当設計フェーズが妥当性判定]
-    S2 -->|requirements_misinterpretation| HObasic
+    S2 -->|requirements_misinterpretation| HOreq[requirements 差し戻し → レビュー<br/>→ 下流 basic / detailed / test-design 連鎖更新]
+    HOtest --> S3
     HOdetailed --> S3
     HObasic --> S3
+    HOreq --> S3
     HOcheck -->|入るべき = 設計更新| S3
-    HOcheck -->|入れない = コードから除去| S4
+    HOcheck -->|入れない = 除去。除去確認テストを 3-0 で作る| S3
     S3[3 テストコード修正<br/>3-0 再現テスト確保 必須 Red<br/>3-1 前工程補強 任意 Red] --> S4
     S4[4 コード修正 実装] --> S5
-    S5[5 テスト実施 検出元 追加分 リグレッション]
+    S5[5 テスト実施 検出元 追加分 リグレッション<br/>+ 影響範囲 impacted_FIDs 全テスト]
     S5 -->|全 Pass| Verified([verified])
     S5 -->|Fail あり| Loop[次の反復へ]
     Loop --> S1
@@ -106,20 +109,32 @@ bug-report.md の「1. 原因調査」セクションには調査レポートへ
 
 ### Step 2 : 影響範囲の判定とハンドオフ (Impact Assessment & Handoff)
 
-**bug-fix スキルは設計を直接編集しない。** 設計の修正・追記・削除はすべて該当する設計フェーズ (`basic-design` / `detailed-design`) の責務であり、それらのフェーズが自身のレビューゲート (per_feature + cross) を通って初めて確定する。
-本 Step ではどの設計フェーズに差し戻すかを判定し、`bug.json` に記録するだけ。実際の差し戻し spawn はオーケストレータ (`dev-workflow`) が行う。
+**bug-fix スキルは設計を直接編集しない。** 要件・設計・テスト設計の修正・追記・削除はすべて該当する上流フェーズ (`requirements` / `basic-design` / `detailed-design` / `test-design`) の責務であり、それらのフェーズが自身のレビューゲートを通って初めて確定する。
+本 Step では **(a) 根本原因が混入した最上流の工程** と **(b) 影響範囲 (`impacted_FIDs` / `impacted_layers`)** を判定し、`bug.json` に記録するだけ。実際の差し戻し spawn と下流工程の連鎖更新はオーケストレータ (`dev-workflow`) が行う。
 
-#### 分類 (classification)
+#### 分類 (classification) — 根本原因の混入工程を特定する
 
-原因調査の結果に応じて以下のいずれかに分類する:
+原因調査の結果に応じて以下のいずれかに分類する。**迷う場合はより上流に倒す** (上流の誤りを下流で握り潰さない):
 
 | 分類                            | 内容                                                                     | 取るアクション                                                                       |
 | ------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `code_bug_only`                 | 設計どおり。実装にバグがあるだけ                                         | 設計差し戻しなし。Step 3 (テストコード補強) → Step 4 (コード修正) へ進む              |
-| `design_error_detailed`         | 詳細設計に誤りがある (機能内設計の問題)                                  | **`detailed-design` に差し戻し**。該当機能の詳細設計を再実施 → そのレビューを通す     |
-| `design_error_basic`            | 基本設計に誤りがある (機能分割・アーキ・要件解釈の問題)                  | **`basic-design` に差し戻し**。基本設計を再実施 → そのレビューを通す                  |
+| `code_bug_only`                 | 設計どおり。実装にバグがあるだけ                                         | 差し戻しなし。Step 3 (テストコード補強) → Step 4 (コード修正) へ進む                  |
+| `test_design_gap`               | 実装は設計どおりだが、テスト設計の観点漏れで検出が漏れた/遅れた           | **`test-design` に差し戻し** (影響層の差分更新)。そのレビューを通す                   |
+| `design_error_detailed`         | 詳細設計に誤りがある (機能内設計の問題)                                  | **`detailed-design` に差し戻し** → レビュー → 下流 `test-design` を影響層で連鎖更新   |
+| `design_error_basic`            | 基本設計に誤りがある (機能分割・アーキの問題)                            | **`basic-design` に差し戻し** → レビュー → 下流 `detailed-design` / `test-design` を影響 FID で連鎖更新 |
 | `undocumented_behavior`         | コードに設計外の振る舞いがある                                           | **そもそも設計に入れるべきか** を該当設計フェーズに検証依頼。結果次第で分岐 (下記参照) |
-| `requirements_misinterpretation`| 要件解釈ミス。要件理解が間違っていた                                     | **`basic-design` まで戻し**、必要なら要件 (USDM 等) もユーザ確認                       |
+| `requirements_misinterpretation`| 要件の誤り・要件解釈ミス                                                 | **`requirements` に差し戻し** (要件定義書の修正はユーザ確認必須) → requirements-review → 下流 `basic-design` / `detailed-design` / `test-design` を影響範囲で連鎖更新 |
+
+#### 影響範囲 (impacted_FIDs / impacted_layers) の特定
+
+差し戻しの有無に関わらず、以下から **影響を受ける機能とテスト層** を導出して `bug.json` に記録する (Step 5-4 とオーケストレータの再テスト対象になる):
+
+1. Root Cause の変更対象モジュールを参照しているコード (Grep で参照元を洗う)
+2. `feature-list.md` の機能間依存 (`depends_on` で当該 FID に依存する機能)
+3. 設計差し戻しが発生した場合は `design_handoff.updated_design_files[]` が属する FID
+4. 共通モジュール (`COMMON`) を修正する場合は COMMON に依存する全機能
+
+導出根拠を `impact_basis` に 1〜3 行で残す。影響なしと判断した場合も「なし」の根拠を書く。
 
 #### `undocumented_behavior` の検証フロー
 
@@ -129,32 +144,36 @@ bug-report.md の「1. 原因調査」セクションには調査レポートへ
 2. オーケストレータが該当設計フェーズを spawn し、サブエージェントは:
    - 当該振る舞いがあるべきか (要件/上位設計から見て妥当か) を判断
    - **入るべき** → 設計を更新 → レビュー通過後、bug-fix Step 3 へ
-   - **入るべきでない** → 設計は変更せず、`decisions.md` に「コード側で除去」と記録。bug-fix は当該コードを除去する Step 4 へ
+   - **入るべきでない** → 設計は変更せず、`decisions.md` に「コード側で除去」と記録。bug-fix は **Step 3-0 で「当該振る舞いが存在しないこと」を期待する再現テストを書き、除去前のコードで Fail (Red) を確認** してから、Step 4 で当該コードを除去する (除去でも TDD 規律をスキップしない)
 3. この判断結果を `bug.json` の `decision_notes` に記録
 
 つまり「設計に書いていないからとりあえず追記する」は禁止。**追記の妥当性自体を設計フェーズが判断** する。
 
 #### 手順
 
-1. **判定**: 原因調査結果 (Step 1) に基づいて上記分類のいずれかを選ぶ。即時判断が難しい場合 (`undocumented_behavior` 等) は **ユーザにチャットで確認**。
+1. **判定**: 原因調査結果 (Step 1) に基づいて上記分類のいずれかを選び、あわせて影響範囲 (`impacted_FIDs` / `impacted_layers`) を導出する。即時判断が難しい場合 (`undocumented_behavior` 等) は **ユーザにチャットで確認**。
 2. **`bug.json` 更新**:
    ```
    iterations[i].sub_phases.design_handoff:
      status              = "in_progress"
-     classification      = "code_bug_only" | "design_error_detailed" | "design_error_basic" | "undocumented_behavior" | "requirements_misinterpretation"
-     target_phase        = "none" | "detailed_design" | "basic_design"
+     classification      = "code_bug_only" | "test_design_gap" | "design_error_detailed" | "design_error_basic" | "undocumented_behavior" | "requirements_misinterpretation"
+     target_phase        = "none" | "test_design" | "detailed_design" | "basic_design" | "requirements"
      target_FIDs         = [<差し戻し対象機能ID>]
+     impacted_FIDs       = [<影響を受ける機能ID (target_FIDs 以外も含む)>]
+     impacted_layers     = ["unit" | "integration" | "e2e", ...]
+     impact_basis        = "<影響範囲の導出根拠 (参照元コード / depends_on / 更新設計ファイル)>"
      reason              = "<分類の根拠 (Step 1 のエビデンスに基づく)>"
      decision_notes      = ""           ※ undocumented_behavior の場合に設計フェーズの判断結果を記入
    ```
-3. **`code_bug_only` 以外** の場合: 戻り値で **「設計差し戻しが必要」とオーケストレータに通知** して本反復を一旦中断 (`status = "blocked_for_design_rerun"`)。本スキルからは設計ドキュメントを Edit してはいけない。
+3. **`code_bug_only` 以外** の場合: 戻り値で **「上流工程への差し戻しが必要」とオーケストレータに通知** して本反復を一旦中断 (`status = "blocked_for_design_rerun"`)。本スキルからは要件・設計・テスト設計ドキュメントを Edit してはいけない。
 4. **`code_bug_only`** の場合: そのまま Step 3 へ進む。
 
 #### オーケストレータ側の挙動 (参考・本スキルは触らない)
 
-- 差し戻し要請を受けたら、対象の設計フェーズ (`basic-design` または `detailed-design`) を spawn
-- 設計フェーズは通常どおり進み、その **2 段レビュー (per_feature + cross)** を通って完了
-- レビュー通過後、`bug.json` の `design_handoff.design_rerun_completed_at`, `design_review_per_feature_passed`, `design_review_cross_passed`, `updated_design_files[]` を更新
+- 差し戻し要請を受けたら、`target_phase` の工程 (`requirements` / `basic-design` / `detailed-design` / `test-design`) を spawn
+- 差し戻し先の工程は通常どおり進み、そのレビューゲートを通って完了
+- **下流工程の連鎖更新**: 差し戻し先より下流の工程 (requirements → basic-design → detailed-design → test-design の順) を、影響範囲 (`impacted_FIDs` / `impacted_layers`) に縮退した差分更新で順に再実施し、各段のレビューを通す (差分が生じない段は skip 可・根拠を decisions.md に記録)
+- 完了後、`bug.json` の `design_handoff.design_rerun_completed_at`, `design_review_per_feature_passed`, `design_review_cross_passed`, `updated_design_files[]`, `downstream_rerun[]` を更新
 - bug-fix を再 spawn し、本反復を **Step 3 から再開**
 
 #### `design_handoff` 完了の判定
@@ -264,8 +283,8 @@ iterations[i].sub_phases.code_fix:
 
 1. **再現テスト** (`found_in_test_case_id` = Step 3-0 で確保したテスト)。修正後は **Pass (Green) になること**
 2. **ステップ3-1 で追加・修正したテスト** (今回の反復で前工程補強として書いたケース)
-3. **同一機能のリグレッション全件** (`docs/03_test_design/<FID>/*.md` の全テスト)
-4. **横断的影響範囲のテスト** (該当時): 設計修正が他機能に波及する場合、その機能のテストも実行
+3. **同一機能のリグレッション全件** (`docs/03_test_design/<FID>/*.md` の全テスト = 3 層すべて)
+4. **影響範囲のテスト (`impacted_FIDs` が非空なら必須・任意ではない)**: Step 2 で記録した `impacted_FIDs` の各機能について、`impacted_layers` の層 (検出層より上位の層を含む) のテストを実行する。未実行の影響機能を残したまま反復を pass にしてはならない
 
 結果を `docs/04_test_results/<FID>/<層>-result.md` に **反復番号付きで追記**。
 
@@ -321,13 +340,15 @@ bug-fix-review の判定に従い:
 
 - [ ] 原因調査は **bug-investigation Agent の独立調査レポート** に基づく (本 Agent が自前で調査していない / 推測ではない)
 - [ ] **Step 2 で bug-fix が設計を直接編集していない** (規律)
-- [ ] 分類 (`classification`) が記録され、必要な場合は設計フェーズに差し戻されている
-- [ ] 差し戻した場合: 該当設計フェーズの **per_feature レビュー + cross レビュー両方** を pass している (`design_review_per_feature_passed && design_review_cross_passed`)
-- [ ] `undocumented_behavior` の場合: 設計フェーズが「入れるべきか」を判断し、`decision_notes` に結論と理由が記録されている
+- [ ] 分類 (`classification`) が記録され、必要な場合は **根本原因が混入した最上流の工程** (requirements / basic-design / detailed-design / test-design) に差し戻されている
+- [ ] 影響範囲 (`impacted_FIDs` / `impacted_layers`) と導出根拠 (`impact_basis`) が記録されている
+- [ ] 差し戻した場合: 差し戻し先工程のレビューを pass し、**下流工程が影響範囲で連鎖更新されている** (skip した段は根拠が decisions.md にある)
+- [ ] `undocumented_behavior` の場合: 設計フェーズが「入れるべきか」を判断し、`decision_notes` に結論と理由が記録されている。「入れない = 除去」でも Step 3-0 の再現テスト (振る舞いが存在しないことの確認) を Red 確認してから除去している
 - [ ] **再現テスト (Step 3-0) が実装前に Red 確認済み** (`reproduction_test.red_confirmed = true`)。報告ベースの不具合では新規作成され、修正後 Green になっている
 - [ ] 前工程テスト層の補強 (Step 3-1) が **TDD で** 行われている (修正前 Fail / 修正後 Pass を確認)。スキップ時も再現テストは Red 確認済み
 - [ ] コード修正で投入したデバッグコードが残っていない
-- [ ] 検出元・追加分・機能内リグレッションがすべて Pass
+- [ ] 検出元・追加分・機能内リグレッション (3 層) がすべて Pass
+- [ ] `impacted_FIDs` が非空の場合、影響機能の該当層テストがすべて実行され Pass している
 - [ ] `bug.json` の最新反復 `iterations[-1].result = "pass"`, `status = "verified"`
 - [ ] `status.json` の `open_bugs` から `closed_bugs` に移動済み
 - [ ] `decisions.md` への追記が完了 (差し戻し判断と理由)

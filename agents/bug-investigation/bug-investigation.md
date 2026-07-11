@@ -61,7 +61,7 @@ iteration: <N>            (mode=bug。反復番号)
 
 ### Step 5 : 分類の推奨
 
-`classification` の **推奨** を理由付きで出す (`code_bug_only` / `design_error_detailed` / `design_error_basic` / `undocumented_behavior` / `requirements_misinterpretation`)。**最終判定は bug-fix の Step 2** (本 Agent は推奨まで)。
+`classification` の **推奨** を理由付きで出す (`code_bug_only` / `test_design_gap` / `design_error_detailed` / `design_error_basic` / `undocumented_behavior` / `requirements_misinterpretation`)。根本原因が **どの工程で混入したか** (要件 / 基本設計 / 詳細設計 / テスト設計 / 実装) を根拠つきで示し、迷う場合はより上流に倒す。**最終判定は bug-fix の Step 2** (本 Agent は推奨まで)。あわせて、Root Cause の参照元コードから **影響が及びそうな機能・テスト層の候補** もレポートに残す (bug-fix Step 2 の `impacted_FIDs` 導出の入力になる)。
 
 ### Step 6 : 原状復帰と出力
 
@@ -84,7 +84,8 @@ iteration: <N>            (mode=bug。反復番号)
 - root_cause: <ファイル:行番号> + 原因の説明
 - evidence: エビデンスの要点 (詳細はレポートパス参照)
 - repro: 再現手順 / 再現コマンド
-- suggested_classification: code_bug_only | design_error_* | undocumented_behavior | requirements_misinterpretation
+- suggested_classification: code_bug_only | test_design_gap | design_error_* | undocumented_behavior | requirements_misinterpretation
+- suspected_impact: 影響が及びそうな機能ID・テスト層の候補と根拠 (bug-fix の impacted_FIDs 導出の入力)
 - confidence: high | medium | low (low なら次の観測案も)
 - report_path: docs/05_bug_reports/<BID>-investigation-<N>.md
 - open_questions / decisions / blockers

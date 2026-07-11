@@ -56,18 +56,19 @@ model: inherit
 ### Step 2: 影響範囲の判定とハンドオフ (Impact Assessment & Handoff)
 - [ ] **bug-fix サブエージェントが設計ドキュメントを直接編集していない** (規律違反: NG)
   - 検証: `bug.json` の `code_fix.changed_files[]` と `design_handoff.updated_design_files[]` に `docs/01_basic_design/...` や `docs/02_detailed_design/...` への変更が含まれている場合、それは設計フェーズの spawn 経由でないと NG
-- [ ] `classification` が記録されている (`code_bug_only` / `design_error_detailed` / `design_error_basic` / `undocumented_behavior` / `requirements_misinterpretation`)
-- [ ] 分類の `reason` が Step 1 のエビデンスに基づいて記述されている (推測ではない)
+- [ ] `classification` が記録されている (`code_bug_only` / `test_design_gap` / `design_error_detailed` / `design_error_basic` / `undocumented_behavior` / `requirements_misinterpretation`)
+- [ ] 分類の `reason` が Step 1 のエビデンスに基づいて記述されている (推測ではない)。分類が **根本原因の混入工程として最上流** になっている (上流の誤りを下流分類で握り潰していない)
+- [ ] 影響範囲 `impacted_FIDs[]` / `impacted_layers[]` と導出根拠 `impact_basis` が記録されている (「影響なし」の場合も根拠がある)
 - [ ] `code_bug_only` 以外の場合:
-  - [ ] `target_phase` が `detailed_design` または `basic_design` で指定されている
+  - [ ] `target_phase` が `test_design` / `detailed_design` / `basic_design` / `requirements` のいずれかで指定されている
   - [ ] `target_FIDs[]` に対象機能が列挙されている
-  - [ ] 該当設計フェーズが **実際に spawn され完了** している (`design_rerun_completed_at` が記入)
-  - [ ] 該当設計フェーズの **per_feature レビューが pass** (`design_review_per_feature_passed = true`)
-  - [ ] 該当設計フェーズの **cross レビューが pass** (`design_review_cross_passed = true`)
-  - [ ] `updated_design_files[]` に設計フェーズが更新したファイルが列挙されている
+  - [ ] 差し戻し先の工程が **実際に spawn され完了** している (`design_rerun_completed_at` が記入)
+  - [ ] 差し戻し先工程のレビューが pass している (`design_review_per_feature_passed` / `design_review_cross_passed`。requirements の場合は requirements-review + human-checkpoint)
+  - [ ] **下流工程の連鎖更新** (`downstream_rerun[]`) が記録され、実施された段はレビュー pass、skip された段は根拠が `decisions.md` にある
+  - [ ] `updated_design_files[]` に更新された要件/設計/テスト設計ファイルが列挙されている
 - [ ] `undocumented_behavior` の場合:
   - [ ] 設計フェーズが「入れるべきか」を判断した結果が `decision_notes` に明示されている
-  - [ ] 入れない判断の場合、bug-fix Step 4 で当該コードが除去されている (`code_fix.changed_files[]` に除去対象が含まれる)
+  - [ ] 入れない判断の場合、**Step 3-0 で「振る舞いが存在しないこと」を確認する再現テストが Red 確認されてから**、Step 4 で当該コードが除去されている (`code_fix.changed_files[]` に除去対象が含まれる)
 - [ ] `decisions.md` に「B<NNN>: 差し戻し判断と理由」が追記されている
 
 ### Step 3: テストコードの修正 (TDD Red 確認・実装より前)
@@ -94,8 +95,8 @@ model: inherit
 - [ ] `executed_test_ids[]` に以下4種すべてが含まれる:
   1. 再現テストID (Step 3-0。修正後 Green であること)
   2. Step 3-1 で追加・修正したテストID
-  3. 同一機能 (`<FID>`) のリグレッション全件
-  4. 横断的影響範囲のテスト (該当時)
+  3. 同一機能 (`<FID>`) のリグレッション全件 (3 層すべて)
+  4. **影響範囲のテスト — `impacted_FIDs[]` が非空なら必須**: 影響機能 × `impacted_layers[]` (検出層より上位の層を含む) のテストがすべて実行されている。未実行の影響機能が残っていれば NG
 - [ ] `pass_count`, `fail_count`, `failed_test_ids[]` が記録されている
 - [ ] 結果ログが `docs/04_test_results/<FID>/<layer>-result.md` に **反復番号付き** で追記されている
 - [ ] `iterations[i].result` が `pass` または `fail` に確定している
