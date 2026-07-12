@@ -86,7 +86,7 @@ model: inherit
 - [ ] `detailed-design.md` に9章すべてが存在 (該当しない章は「該当なし」と理由が明記されている)
 - [ ] UI を持つ機能は `ui-design.md`、永続化を持つ機能は `db-design.md` が存在
 - [ ] Mermaid 図が必要箇所すべてに描かれている (§4 サブ機能関連図 / §8 シーケンス / §9 状態遷移。db-design ありなら ER図も)
-- [ ] **コードが書かれていない** (§5 処理内容・§6 I/F 定義は文章・表・図のみ。擬似コードも不可)
+- [ ] **コードが書かれていない (fail 条件)**: §5 処理内容・§6 I/F 定義に加え、**追加成果物 (stack ルール由来の *-schemas.md / *-entities.md / db-design.md 等を含む) 全体** を対象に、実装コード・擬似コード・言語/FW 固有のモデル/DTO/スキーマ定義コード (Pydantic / SQLAlchemy / JPA / ActiveRecord / zod / DDL 等)・SQL 本文が含まれていないこと。表現は文章・表・Mermaid・宣言的契約 (OpenAPI 等)・サンプル JSON のみ可。機械的な当たりの付け方: 設計ドキュメント内の ```mermaid / ```json / ```yaml 以外の言語指定コードブロックは原則 NG。stack ルールがコード記載を指示していても本項が優先 (発見時は issues に「設計へのコード混入」として記録し fail)
 
 ### B. ID 体系
 - [ ] サブ機能ID `<FID>-<連番>` がユニーク

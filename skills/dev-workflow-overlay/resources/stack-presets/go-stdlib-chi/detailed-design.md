@@ -14,16 +14,15 @@
 
 ## OVERRIDE
 - 「機能設計シーケンス図にレイヤを記載」→ Mermaid sequenceDiagram で `Client / Router / Middleware / Handler / Service / Repository / DB` の 7 lane (Middleware は認可時のみ)
-- 「DB 設計を ER 図で記述」→ migration SQL + sqlc queries を真とし、ER 図は主要 FK 関連のみ Mermaid で記述
+- 「DB 設計を ER 図で記述」→ 設計の正は **Mermaid erDiagram (主要 FK) + カラム定義表** (型 / NOT NULL / PK / FK / index / 制約)。migration SQL と sqlc クエリは **実装フェーズで本設計から作成** する (設計書に SQL 本文は書かない)
 
 ## DISABLE
 - なし
 
 ## ADDITIONAL_ARTIFACTS
 - `docs/02_detailed_design/<FID>/sqlc-queries.md`
-  - 該当機能で追加 / 変更する sqlc クエリの意図、パフォーマンス考慮 (index, JOIN)
-- `internal/db/migrations/<timestamp>_<FID>_*.sql`
-- `api/openapi.yaml` (OpenAPI を採用する場合、該当パスのスニペット)
+  - 該当機能で追加 / 変更するクエリの **意図・アクセスパタン・パフォーマンス考慮 (index, JOIN) を表と文章で記述** (SQL 本文は書かない。migration SQL / sqlc クエリは実装フェーズで本仕様から作成)
+- `api/openapi.yaml` (OpenAPI を採用する場合、該当パスのスニペット。宣言的契約のため設計成果物として可)
 - `docs/02_detailed_design/COMMON/middleware.md` (共通 middleware の一覧と適用順)
 
 ## REVIEW_EXTRAS

@@ -28,15 +28,14 @@
 
 ## OVERRIDE
 - 「機能設計シーケンス図」→ Mermaid sequenceDiagram で `Client / Security Filter / Controller / Service / Repository / DB / External` の lane を必須
-- 「DB 設計を ER 図で記述」→ JPA Entity + Flyway SQL を真、Mermaid erDiagram は主要 FK のみ
+- 「DB 設計を ER 図で記述」→ 設計の正は **Mermaid erDiagram (主要 FK) + カラム定義表** (型 / NOT NULL / PK / FK / index / 制約)。JPA Entity と Flyway SQL は **実装フェーズで本設計から作成** する (設計書にコードは書かない)
 
 ## DISABLE
 - なし
 
 ## ADDITIONAL_ARTIFACTS
 - `docs/02_detailed_design/<FID>/api-schema.yaml` (springdoc-openapi 出力)
-- `docs/02_detailed_design/<FID>/jpa-entities.md` (主要 Entity と関連)
-- `docs/02_detailed_design/<FID>/db-design.md` に Flyway SQL を併記
+- `docs/02_detailed_design/<FID>/jpa-entities.md` (主要 Entity のフィールド / 型 / 関連 / 制約を **表で記述**。JPA アノテーション付きコードは書かない。実装フェーズで本仕様から作成)
 - `docs/02_detailed_design/COMMON/security-config.md` (Spring Security の全体設計)
 
 ## REVIEW_EXTRAS

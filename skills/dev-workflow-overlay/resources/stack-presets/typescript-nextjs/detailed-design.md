@@ -23,7 +23,7 @@
 - `docs/02_detailed_design/<FID>/route-map.md`
   - 該当機能で追加 / 変更する route segment、layout / page / loading / error の一覧、SSR/ISR/SSG の方針、cache 戦略
 - `docs/02_detailed_design/<FID>/zod-schemas.md`
-  - 入出力 zod スキーマ一覧 (form schema, action input/output schema, db row schema)
+  - 入出力スキーマ仕様の一覧 (form / action input・output / db row)。**フィールド・型・制約・エラーメッセージを表で記述し、サンプル JSON を添える (zod コードは書かない。実装フェーズで本仕様から作成)**
 - `docs/02_detailed_design/<FID>/server-actions.md`
   - server action の名前 / 入力スキーマ / 戻り型 (Result 型) / 認可要件
 - `docs/02_detailed_design/<FID>/ui-design.md` に shadcn/ui の使用コンポーネント一覧と layout を記載

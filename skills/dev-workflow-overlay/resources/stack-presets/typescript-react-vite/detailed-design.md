@@ -28,6 +28,7 @@
 - `docs/02_detailed_design/<FID>/queries.md`
   - queryKey の体系、staleTime、無効化 (`queryClient.invalidateQueries`) の発火条件
 - `docs/02_detailed_design/<FID>/zod-schemas.md`
+  - 入出力スキーマ仕様の一覧。**フィールド・型・制約・エラーメッセージを表で記述し、サンプル JSON を添える (zod コードは書かない。実装フェーズで本仕様から作成)**
 - `docs/02_detailed_design/<FID>/ui-design.md` に shadcn/ui のコンポーネント使用一覧、layout、a11y 要件
 
 ## REVIEW_EXTRAS

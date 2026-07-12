@@ -16,7 +16,7 @@
 
 ## OVERRIDE
 - 「機能設計シーケンス図にレイヤを記載」→ Mermaid sequenceDiagram で `Client / View(ViewSet) / Service / Model(ORM) / DB` の 5 lane を必須とする
-- 「DB 設計を ER 図で記述」→ Django Model コード + Mermaid erDiagram (主要関連のみ)
+- 「DB 設計を ER 図で記述」→ 設計の正は **Mermaid erDiagram (主要関連) + カラム定義表** (型 / null / PK / FK / index / 制約)。Django Model コードは **実装フェーズで本設計から作成** する (設計書にコードは書かない)
 
 ## DISABLE
 - なし
@@ -25,8 +25,7 @@
 - `docs/02_detailed_design/<FID>/api-schema.yaml`
   - 該当機能のエンドポイントだけ drf-spectacular で出力したスニペット
 - `docs/02_detailed_design/<FID>/serializers.md`
-  - 主要 serializer の項目説明、バリデーションルール、サンプル JSON
-- `docs/02_detailed_design/<FID>/db-design.md` に Django Model コードを併記
+  - 主要 serializer の項目説明、バリデーションルール、サンプル JSON。**表形式で記述 (Serializer コードは書かない。実装フェーズで本仕様から作成)**
 - `docs/02_detailed_design/COMMON/permissions.md`
   - 共通 permission クラスの一覧と適用ルール
 

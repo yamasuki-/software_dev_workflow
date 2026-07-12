@@ -23,17 +23,16 @@
 
 ## OVERRIDE
 - 「機能設計シーケンス図」→ Mermaid sequenceDiagram で `Client (Turbo) / Routes / Controller / Service / Model / DB` の lane を必須
-- 「DB 設計を ER 図で記述」→ ActiveRecord schema + migration を真とし、ER 図は主要 FK のみ Mermaid で記述
+- 「DB 設計を ER 図で記述」→ 設計の正は **Mermaid erDiagram (主要 FK) + カラム定義表** (型 / null / PK / FK / index / 制約)。ActiveRecord schema / migration は **実装フェーズで本設計から作成** する (設計書にコードは書かない)
 
 ## DISABLE
 - なし
 
 ## ADDITIONAL_ARTIFACTS
-- `docs/02_detailed_design/<FID>/active-record-models.md` (Model / association / scope)
+- `docs/02_detailed_design/<FID>/active-record-models.md` (Model / association / scope を **表で記述**。ActiveRecord コードは書かない。実装フェーズで本仕様から作成)
 - `docs/02_detailed_design/<FID>/service-objects.md` (Service の入力 / Result / 呼び出し元)
 - `docs/02_detailed_design/<FID>/views-and-turbo.md` (使用する Turbo Frame / Stream、Stimulus controller)
 - API モード時 `docs/02_detailed_design/<FID>/api-schema.yaml`
-- `db/migrate/<timestamp>_<FID>_*.rb`
 
 ## REVIEW_EXTRAS
 - ビジネスロジックが Controller / Model に染み出していないか

@@ -17,7 +17,7 @@
 
 ## OVERRIDE
 - 「機能設計シーケンス図にレイヤを記載」→ Mermaid sequenceDiagram で `Client / Router / Service / Repository / DB` の 5 lane を必須とする
-- 「DB 設計を ER 図で記述」→ SQLAlchemy モデルコードを真とし、ER 図は主要関連 (FK) のみ Mermaid erDiagram で記述
+- 「DB 設計を ER 図で記述」→ 設計の正は **Mermaid erDiagram (主要 FK) + カラム定義表** (型 / NOT NULL / PK / FK / index / 制約)。SQLAlchemy モデルコードは **実装フェーズで本設計から作成** する (設計書にコードは書かない)
 
 ## DISABLE
 - 「画面遷移図必須」(API only プロジェクトでは無効化。フロントエンドが別リポジトリの場合)
@@ -26,8 +26,7 @@
 - `docs/02_detailed_design/<FID>/api-schema.yaml`
   - 該当機能のエンドポイントだけを切り出した OpenAPI スニペット (FastAPI が出す全 OpenAPI から該当パスを抽出)
 - `docs/02_detailed_design/<FID>/pydantic-schemas.md`
-  - 主要 request/response の項目説明、バリデーションルール、サンプル JSON
-- `docs/02_detailed_design/<FID>/db-design.md` の DDL セクションに **SQLAlchemy モデルコード** を併記
+  - 主要 request/response の項目説明、バリデーションルール、サンプル JSON。**表形式で記述 (Pydantic コードは書かない。実装フェーズで本仕様から作成)**
 - `docs/02_detailed_design/COMMON/dependencies.md`
   - 共通 dependency (認証/認可/ページネーション/トランザクション) の一覧と使い方
 
