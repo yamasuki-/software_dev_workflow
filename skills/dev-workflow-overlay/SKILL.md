@@ -245,7 +245,6 @@ Claude Code への最初の発話例:
 
 ```
 dev-workflow-overlay スキルで開発を進めたい。
-プロジェクトルート: C:\Users\<user>\projects\my-app
 
 プロジェクト固有ルールを <project>/.dev-workflow/rules/ 配下に置いてある。
 ベースのワークフローはそのまま、プロジェクトルールを優先しながら進めてほしい。
